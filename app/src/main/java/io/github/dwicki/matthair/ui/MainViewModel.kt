@@ -1,60 +1,69 @@
 package io.github.dwicki.matthair.ui
 
 import android.app.Application
+import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.dwicki.matthair.MatthairApp
+import io.github.dwicki.matthair.R
 import io.github.dwicki.matthair.data.AuthMethod
 import io.github.dwicki.matthair.data.ServerConfig
+import io.github.dwicki.matthair.ha.FabricInfo
+import io.github.dwicki.matthair.ha.HaApi
 import io.github.dwicki.matthair.ha.HaArea
 import io.github.dwicki.matthair.ha.HaAuth
 import io.github.dwicki.matthair.ha.HaDevice
+import io.github.dwicki.matthair.ha.HaException
+import io.github.dwicki.matthair.ha.HaSession
 import io.github.dwicki.matthair.ha.HttpClients
 import io.github.dwicki.matthair.ha.IngressSession
 import io.github.dwicki.matthair.ha.MatterServerClient
+import io.github.dwicki.matthair.ha.NodeDiagnostics
+import io.github.dwicki.matthair.ha.ServerProbe
 import io.github.dwicki.matthair.matter.PayloadException
 import io.github.dwicki.matthair.matter.SetupPayload
 import io.github.dwicki.matthair.matter.SetupPayloadParser
 import io.github.dwicki.matthair.util.AppLog
 import io.github.dwicki.matthair.util.Diagnostics
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.URI
-import javax.net.ssl.SSLException
 
 /** Connection state of the HA instance shown on the home screen. */
 sealed interface HaStatus {
     data object Connecting : HaStatus
     data class Connected(val version: String) : HaStatus
     data class Offline(val reason: String?) : HaStatus
-    /** Server configured, but no (valid) credentials: the user must sign in. */
+    /** A server is configured, but there are no valid credentials. */
     data object SignedOut : HaStatus
 }
 
+/** A Matter device plus its availability; null while still unknown. */
 data class DeviceRow(val device: HaDevice, val available: Boolean?)
 
-/** One-shot result of an async UI action, shown as snackbar or dialog. */
+/** One-shot result of a UI action, shown as a snackbar. */
 sealed interface UiResult {
     data class Error(val message: String) : UiResult
-    data class Message(val resId: Int) : UiResult
+    data class Message(@StringRes val resId: Int) : UiResult
 }
 
 /**
- * Single ViewModel for the whole app. The domain objects (commissioning session, environment
- * check) live in the process-wide [io.github.dwicki.matthair.AppContainer]; this class adapts them for the UI
- * and holds wizard state such as the scanned payload.
+ * The app's only ViewModel. The long-lived domain objects (commissioning session, environment
+ * check, HA connection) live in [io.github.dwicki.matthair.AppContainer]; this class adapts them
+ * for the UI and holds the state of the add-device wizard.
  */
 class MainViewModel(app: Application) : AndroidViewModel(app) {
-    private val c = (app as MatthairApp).container
+    private val container = (app as MatthairApp).container
 
-    val config: StateFlow<ServerConfig?> = c.config.config
-    val session = c.session.state
-    val environment = c.environment.report
+    val config: StateFlow<ServerConfig?> = container.config.config
+    val session = container.session.state
+    val environment = container.environment.report
+    val showDetails = MutableStateFlow(container.config.showDetails)
+
+    /** Decided once at start-up, see MainActivity. */
+    val isSignedIn: Boolean get() = container.config.isSignedIn
 
     private val _status = MutableStateFlow<HaStatus>(HaStatus.Connecting)
     val status: StateFlow<HaStatus> = _status.asStateFlow()
@@ -65,7 +74,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _areas = MutableStateFlow<List<HaArea>>(emptyList())
     val areas: StateFlow<List<HaArea>> = _areas.asStateFlow()
 
-    /** The payload of the device currently being added. Held in memory only. */
+    /** The code of the device being added. Kept in memory only, never persisted. */
     private val _payload = MutableStateFlow<SetupPayload?>(null)
     val payload: StateFlow<SetupPayload?> = _payload.asStateFlow()
 
@@ -75,140 +84,101 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _busy = MutableStateFlow(false)
     val busy: StateFlow<Boolean> = _busy.asStateFlow()
 
-    val showDetails = MutableStateFlow(c.config.showDetails)
-
     fun consumeResult() { _result.value = null }
 
-    /** Decided once at start-up; see MainActivity. */
-    val isSignedIn: Boolean get() = c.config.isSignedIn
+    /**
+     * Runs [block] in the background with the busy indicator on. Failures become an error
+     * snackbar, success optionally shows [successMessage]. Returns whether it succeeded.
+     */
+    private suspend fun <T> action(@StringRes successMessage: Int? = null, block: suspend () -> T): Result<T> {
+        _busy.value = true
+        val result = runCatching { block() }
+            .onSuccess { if (successMessage != null) _result.value = UiResult.Message(successMessage) }
+            .onFailure { _result.value = UiResult.Error(it.message ?: it.javaClass.simpleName) }
+        _busy.value = false
+        return result
+    }
 
-    // --- Onboarding --------------------------------------------------------------------------
+    private suspend fun api(): HaApi = container.connector.session().api
 
-    /** Certificate the user must confirm before we continue (self-signed HA). */
+    // --- Onboarding -------------------------------------------------------------------------------
+
+    /** A self-signed certificate the user has to confirm before we continue. */
     data class CertPrompt(val sha256: String, val pending: ServerConfig)
 
     private val _certPrompt = MutableStateFlow<CertPrompt?>(null)
     val certPrompt: StateFlow<CertPrompt?> = _certPrompt.asStateFlow()
 
-    /** Problem shown inline on the server screen; null when there is none. */
-    sealed interface ServerProblem {
-        data class Unreachable(val tried: List<String>) : ServerProblem
-    }
+    /** Shown on the server screen when no address variant answered like Home Assistant. */
+    data class ServerProblem(val tried: List<String>)
 
     private val _serverProblem = MutableStateFlow<ServerProblem?>(null)
     val serverProblem: StateFlow<ServerProblem?> = _serverProblem.asStateFlow()
 
-    /** Set when the URL that works differs from what the user typed (shown as info). */
+    /** The working URL, when it differs from what the user typed. */
     private val _correctedUrl = MutableStateFlow<String?>(null)
     val correctedUrl: StateFlow<String?> = _correctedUrl.asStateFlow()
 
     fun clearServerProblem() { _serverProblem.value = null }
 
-    /**
-     * Validate the address before going on to sign in. If the address as typed does not answer
-     * like Home Assistant, the usual variants are tried (http/https, port 8123), because
-     * "https://<ip>" for a plain-HTTP HA on port 80/8123 is a very common mix-up.
-     */
     fun submitServer(local: String, external: String?, onReady: () -> Unit) = viewModelScope.launch {
-        _busy.value = true
         _serverProblem.value = null
         _correctedUrl.value = null
-        val typed = normalizeUrl(local)
-        val candidates = urlCandidates(typed)
-        var found: String? = null
-        var tlsPin: String? = null
-        withContext(Dispatchers.IO) {
-            for (url in candidates) {
-                when (val r = probe(url)) {
-                    is Probe.Ok -> { found = url; break }
-                    is Probe.UntrustedCert -> { found = url; tlsPin = r.sha256; break }
-                    Probe.NotHa -> Unit
+        _busy.value = true
+        val found = ServerProbe.find(local)
+        _busy.value = false
+
+        when (found) {
+            is ServerProbe.Result.NotFound -> _serverProblem.value = ServerProblem(found.tried)
+            is ServerProbe.Result.Found -> {
+                if (found.url != ServerProbe.normalizeUrl(local)) _correctedUrl.value = found.url
+                val externalUrl = external?.takeIf { it.isNotBlank() }?.let(ServerProbe::normalizeUrl)
+                val config = ServerConfig(found.url, externalUrl, AuthMethod.OAUTH, null)
+                val pin = found.untrustedCertSha256
+                if (pin != null) {
+                    _certPrompt.value = CertPrompt(pin, config)
+                } else {
+                    container.config.save(config)
+                    onReady()
                 }
             }
-        }
-        _busy.value = false
-        val url = found
-        if (url == null) {
-            _serverProblem.value = ServerProblem.Unreachable(candidates)
-            return@launch
-        }
-        if (url != typed) _correctedUrl.value = url
-        val cfg = ServerConfig(url, external?.takeIf { it.isNotBlank() }?.let(::normalizeUrl), AuthMethod.OAUTH, null)
-        val pin = tlsPin
-        if (pin != null) {
-            _certPrompt.value = CertPrompt(pin, cfg)
-        } else {
-            c.config.save(cfg)
-            onReady()
         }
     }
 
     fun trustCertificate(onReady: () -> Unit) {
-        val p = _certPrompt.value ?: return
-        c.config.save(p.pending.copy(pinnedCertSha256 = p.sha256))
+        val prompt = _certPrompt.value ?: return
+        container.config.save(prompt.pending.copy(pinnedCertSha256 = prompt.sha256))
         _certPrompt.value = null
         onReady()
     }
 
     fun dismissCert() { _certPrompt.value = null }
 
-    private sealed interface Probe {
-        data object Ok : Probe
-        data class UntrustedCert(val sha256: String) : Probe
-        data object NotHa : Probe
-    }
-
-    /** Does [url] serve Home Assistant? HA's `/manifest.json` names itself "Home Assistant". */
-    private fun probe(url: String): Probe {
-        val client = HttpClients.create(null).newBuilder()
-            .connectTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(4, java.util.concurrent.TimeUnit.SECONDS)
-            .build()
-        return try {
-            client.newCall(okhttp3.Request.Builder().url("$url/manifest.json").build()).execute().use { r ->
-                if (r.isSuccessful && r.body?.string().orEmpty().contains("Home Assistant")) Probe.Ok else Probe.NotHa
-            }
-        } catch (e: SSLException) {
-            val uri = URI(url)
-            HttpClients.fetchServerCertificate(uri.host, if (uri.port > 0) uri.port else 443)
-                ?.let { Probe.UntrustedCert(HttpClients.sha256(it)) } ?: Probe.NotHa
-        } catch (e: Exception) {
-            AppLog.i("ViewModel", "Probe $url failed: ${e.javaClass.simpleName}")
-            Probe.NotHa
-        }
-    }
-
-    fun authorizeUrl(state: String): String = HaAuth.authorizeUrl(c.config.config.value!!.localUrl, state)
+    fun authorizeUrl(state: String): String = HaAuth.authorizeUrl(container.config.config.value!!.localUrl, state)
 
     fun completeOAuth(code: String, onDone: (Boolean) -> Unit) = viewModelScope.launch {
-        _busy.value = true
-        val cfg = c.config.config.value!!
-        val ok = runCatching {
-            val http = HttpClients.create(cfg.pinnedCertSha256)
-            c.config.oauthTokens = c.auth.exchangeCode(http, cfg.localUrl, code)
-            c.config.save(cfg.copy(authMethod = AuthMethod.OAUTH))
+        val config = container.config.config.value!!
+        val signedIn = action {
+            val http = HttpClients.create(config.pinnedCertSha256)
+            container.config.oauthTokens = container.auth.exchangeCode(http, config.localUrl, code)
+            container.config.save(config.copy(authMethod = AuthMethod.OAUTH))
             verifyLogin()
-        }.onFailure { _result.value = UiResult.Error(it.message ?: "?") }.getOrDefault(false)
-        _busy.value = false
-        onDone(ok)
+        }
+        onDone(signedIn.getOrDefault(false))
     }
 
     fun useToken(token: String, onDone: (Boolean) -> Unit) = viewModelScope.launch {
-        _busy.value = true
-        val cfg = c.config.config.value!!
-        c.config.longLivedToken = token.trim()
-        c.config.save(cfg.copy(authMethod = AuthMethod.LONG_LIVED_TOKEN))
-        val ok = runCatching { verifyLogin() }
-            .onFailure { _result.value = UiResult.Error(it.message ?: "?") }.getOrDefault(false)
-        _busy.value = false
-        onDone(ok)
+        val config = container.config.config.value!!
+        container.config.longLivedToken = token.trim()
+        container.config.save(config.copy(authMethod = AuthMethod.LONG_LIVED_TOKEN))
+        onDone(action { verifyLogin() }.getOrDefault(false))
     }
 
+    /** Only administrators may commission devices, so everyone else is stopped right here. */
     private suspend fun verifyLogin(): Boolean {
-        c.connector.invalidate()
-        val s = c.connector.session()
-        if (!s.api.isAdmin()) {
-            _result.value = UiResult.Message(io.github.dwicki.matthair.R.string.auth_admin_required)
+        container.connector.invalidate()
+        if (!api().isAdmin()) {
+            _result.value = UiResult.Message(R.string.auth_admin_required)
             return false
         }
         refresh()
@@ -216,111 +186,98 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun signOut() {
-        c.connector.invalidate()
-        c.config.signOut()
+        container.connector.invalidate()
+        container.config.signOut()
         _devices.value = emptyList()
     }
 
-    // --- Home / devices ----------------------------------------------------------------------
+    // --- Devices ------------------------------------------------------------------------------------
 
     fun refresh() = viewModelScope.launch {
-        if (c.config.config.value == null) return@launch
+        if (container.config.config.value == null) return@launch
         _status.value = HaStatus.Connecting
         try {
-            val s = c.connector.session()
-            _status.value = HaStatus.Connected(s.api.ws.haVersion)
-            val devices = s.api.matterDevices()
+            val session = container.connector.session()
+            _status.value = HaStatus.Connected(session.api.ws.haVersion)
+            val devices = session.api.matterDevices()
             _devices.value = devices.map { DeviceRow(it, null) }
-            _areas.value = runCatching { s.api.areas() }.getOrDefault(emptyList())
-            // Node availability comes from the Matter server itself.
-            runCatching {
-                val addon = s.api.findMatterAddon() ?: return@runCatching
-                val ingress = IngressSession(s.api, s.baseUrl, addon).apply { open(viewModelScope) }
-                val matter = MatterServerClient.connect(s.http, ingress)
-                val nodes = matter.nodes().associateBy { it.nodeId }
-                matter.close(); ingress.close()
-                _devices.value = devices.map { d -> DeviceRow(d, nodeIdOf(d)?.let { nodes[it]?.available }) }
-            }
+            _areas.value = runCatching { session.api.areas() }.getOrDefault(emptyList())
+            loadAvailability(session, devices)
         } catch (e: Exception) {
-            AppLog.w("ViewModel", "Refresh failed", e)
-            val code = (e as? io.github.dwicki.matthair.ha.HaException)?.code
-            _status.value = if (code == "no_token" || code == "auth_invalid" || code == "auth_failed") HaStatus.SignedOut
-            else HaStatus.Offline(e.message)
+            AppLog.w(TAG, "Refresh failed", e)
+            _status.value = if (isAuthError(e)) HaStatus.SignedOut else HaStatus.Offline(e.message)
         }
     }
 
-    /** HA Matter identifiers look like `deviceid_<fabric>-<nodeIdHex>-MatterNodeDevice`. */
-    private fun nodeIdOf(d: HaDevice): Long? =
-        d.matterIdentifier?.substringAfter('-', "")?.substringBefore('-')?.toULongOrNull(16)?.toLong()
+    /** Whether a node is online is only known to the Matter Server itself. */
+    private suspend fun loadAvailability(session: HaSession, devices: List<HaDevice>) = runCatching {
+        val addon = session.api.findMatterAddon() ?: return@runCatching
+        val ingress = IngressSession(session.api, session.baseUrl, addon).apply { open(viewModelScope) }
+        val matter = MatterServerClient.connect(session.http, ingress)
+        val nodes = matter.nodes().associateBy { it.nodeId }
+        matter.close()
+        ingress.close()
+        _devices.value = devices.map { DeviceRow(it, it.matterNodeId?.let { id -> nodes[id]?.available }) }
+    }
+
+    private fun isAuthError(e: Exception) = (e as? HaException)?.code in setOf("no_token", "auth_invalid", "auth_failed")
 
     fun removeDevice(device: HaDevice) = viewModelScope.launch {
-        runCatching {
-            val s = c.connector.session()
-            val entry = s.api.matterConfigEntryId() ?: error("Matter integration not found")
-            s.api.removeDevice(device.id, entry)
-        }.onFailure { _result.value = UiResult.Error(it.message ?: "?") }
+        action {
+            val entry = api().matterConfigEntryId() ?: error("Matter integration not found")
+            api().removeDevice(device.id, entry)
+        }
         refresh()
     }
 
     /**
-     * Rename a device and/or move it to another room. An empty name restores the name the device
-     * reports itself (HA `name_by_user = null`); [newAreaName] creates the room first.
+     * Rename a device and/or move it to another room. An empty name restores the device's own
+     * name; a [newAreaName] creates that room first.
      */
     fun updateDevice(device: HaDevice, name: String, areaId: String?, newAreaName: String?) = viewModelScope.launch {
-        _busy.value = true
-        runCatching {
-            val api = c.connector.session().api
-            val area = if (!newAreaName.isNullOrBlank()) api.createArea(newAreaName.trim()).id else areaId
-            val custom = name.trim().takeIf { it.isNotEmpty() && it != device.name }
-            api.updateDevice(device.id, custom, area)
-        }.onSuccess { _result.value = UiResult.Message(io.github.dwicki.matthair.R.string.devices_saved) }
-            .onFailure { _result.value = UiResult.Error(it.message ?: "?") }
-        _busy.value = false
+        action(R.string.devices_saved) {
+            val customName = name.trim().takeIf { it.isNotEmpty() && it != device.name }
+            api().updateDevice(device.id, customName, resolveArea(areaId, newAreaName))
+        }
         refresh()
     }
 
-    /** Data for the device overview screen; diagnostics may fail for offline nodes. */
-    data class DeviceDetail(val diagnostics: io.github.dwicki.matthair.ha.NodeDiagnostics?, val error: String?)
+    private suspend fun resolveArea(areaId: String?, newAreaName: String?): String? =
+        if (newAreaName.isNullOrBlank()) areaId else api().createArea(newAreaName.trim()).id
+
+    /** Data for the device screen. Diagnostics can fail for offline nodes, hence the error. */
+    data class DeviceDetail(val diagnostics: NodeDiagnostics?, val error: String?)
 
     private val _detail = MutableStateFlow<DeviceDetail?>(null)
     val detail: StateFlow<DeviceDetail?> = _detail.asStateFlow()
 
     fun loadDetail(deviceId: String) = viewModelScope.launch {
         _detail.value = null
-        _detail.value = runCatching { c.connector.session().api.nodeDiagnostics(deviceId) }
-            .fold({ DeviceDetail(it, null) }, { DeviceDetail(null, it.message) })
+        _detail.value = runCatching { api().nodeDiagnostics(deviceId) }
+            .fold(onSuccess = { DeviceDetail(it, null) }, onFailure = { DeviceDetail(null, it.message) })
     }
 
-    /** Remove a foreign ecosystem (fabric) from a device; refuses HA's own fabric. */
-    fun removeFabric(device: HaDevice, fabric: io.github.dwicki.matthair.ha.FabricInfo) = viewModelScope.launch {
-        val own = _detail.value?.diagnostics?.ownFabricIndex
-        if (own == null || fabric.fabricIndex == own) return@launch
-        _busy.value = true
-        runCatching { c.connector.session().api.removeFabric(device.id, fabric.fabricIndex) }
-            .onSuccess {
-                AppLog.i("ViewModel", "Removed fabric ${fabric.fabricIndex} (${fabric.vendorName}) from ${device.id}")
-                _result.value = UiResult.Message(io.github.dwicki.matthair.R.string.fabric_removed)
-            }
-            .onFailure { _result.value = UiResult.Error(it.message ?: "?") }
-        _busy.value = false
+    /** Removes a foreign ecosystem from a device. HA's own fabric is never removed. */
+    fun removeFabric(device: HaDevice, fabric: FabricInfo) = viewModelScope.launch {
+        val ownIndex = _detail.value?.diagnostics?.ownFabricIndex
+        if (ownIndex == null || fabric.fabricIndex == ownIndex) return@launch
+        action(R.string.fabric_removed) {
+            api().removeFabric(device.id, fabric.fabricIndex)
+            AppLog.i(TAG, "Removed fabric ${fabric.fabricIndex} (${fabric.displayName}) from ${device.id}")
+        }
         loadDetail(device.id)
     }
 
-    /** URL of the device page in the HA web UI. */
-    fun haDeviceUrl(deviceId: String): String? = c.config.config.value?.localUrl?.let { "$it/config/devices/device/$deviceId" }
+    fun haDeviceUrl(deviceId: String): String? = container.config.config.value?.localUrl?.let { "$it/config/devices/device/$deviceId" }
 
-    /** Opens a commissioning window so another ecosystem can add the device (multi-admin). */
+    /** Opens a commissioning window so another ecosystem can add the device too (multi-admin). */
     fun shareDevice(device: HaDevice, onCodes: (manual: String, qr: String) -> Unit) = viewModelScope.launch {
-        _busy.value = true
-        runCatching { c.connector.session().api.openCommissioningWindow(device.id) }
-            .onSuccess { (manual, qr) -> onCodes(manual, qr) }
-            .onFailure { _result.value = UiResult.Error(it.message ?: "?") }
-        _busy.value = false
+        action { api().openCommissioningWindow(device.id) }.onSuccess { (manual, qr) -> onCodes(manual, qr) }
     }
 
-    // --- Add-device wizard -------------------------------------------------------------------
+    // --- Add-device wizard ------------------------------------------------------------------------
 
-    /** Parse a scanned/typed code. Returns the error for inline display, or null on success. */
+    /** Parses a scanned or typed code. Returns the error to show inline, or null on success. */
     fun acceptCode(raw: String): PayloadException? = try {
         _payload.value = SetupPayloadParser.parse(raw)
         null
@@ -330,124 +287,77 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearPayload() { _payload.value = null }
 
-    fun runCheck() = c.environment.run(_payload.value)
+    fun runCheck() = container.environment.run(_payload.value)
 
     fun startCommissioning() {
-        val p = _payload.value ?: return
-        c.session.start(p)
+        _payload.value?.let(container.session::start)
     }
 
-    fun cancelCommissioning() = c.session.cancel()
+    fun cancelCommissioning() = container.session.cancel()
 
     fun finishWizard() {
-        c.session.reset()
+        container.session.reset()
         _payload.value = null // forget the passcode
         refresh()
     }
 
     fun saveNewDevice(deviceId: String, name: String?, areaId: String?, newAreaName: String?, onDone: () -> Unit) = viewModelScope.launch {
-        _busy.value = true
-        runCatching {
-            val api = c.connector.session().api
-            val area = if (!newAreaName.isNullOrBlank()) api.createArea(newAreaName.trim()).id else areaId
-            api.updateDevice(deviceId, name?.trim()?.takeIf { it.isNotEmpty() }, area)
-        }.onFailure { _result.value = UiResult.Error(it.message ?: "?") }
-        _busy.value = false
+        action { api().updateDevice(deviceId, name?.trim()?.takeIf { it.isNotEmpty() }, resolveArea(areaId, newAreaName)) }
         finishWizard()
         onDone()
     }
 
-    /** Multi-admin: add a device that is already in another ecosystem, network only. */
+    /** Multi-admin: adds a device that is already in another ecosystem, over the network only. */
     fun commissionOnNetwork(onDone: (Boolean) -> Unit) = viewModelScope.launch {
-        val p = _payload.value ?: return@launch
-        _busy.value = true
-        AppLog.addSecret(p.rawCode)
-        val ok = runCatching { c.connector.session().api.commission(p.rawCode, networkOnly = true) }
-            .onFailure { _result.value = UiResult.Error(it.message ?: "?") }.isSuccess
-        AppLog.removeSecret(p.rawCode)
+        val payload = _payload.value ?: return@launch
+        AppLog.addSecret(payload.rawCode)
+        val result = action { api().commission(payload.rawCode, networkOnly = true) }
+        AppLog.removeSecret(payload.rawCode)
         _payload.value = null
-        _busy.value = false
         refresh()
-        onDone(ok)
+        onDone(result.isSuccess)
     }
 
-    // --- Fix-it actions from the check list ---------------------------------------------------
+    // --- Fix-it actions of the environment check ----------------------------------------------------
 
     fun enableBleProxy() = viewModelScope.launch {
         val addon = environment.value.addon ?: return@launch
-        _busy.value = true
-        runCatching { c.connector.session().api.enableBleProxy(addon) }
-            .onFailure { _result.value = UiResult.Error(it.message ?: "?") }
-        _busy.value = false
+        action { api().enableBleProxy(addon) }
         runCheck()
     }
 
     fun setWifi(ssid: String, password: String) = viewModelScope.launch {
-        runCatching { c.connector.session().api.setWifiCredentials(ssid, password) }
-            .onFailure { _result.value = UiResult.Error(it.message ?: "?") }
+        action { api().setWifiCredentials(ssid, password) }
         runCheck()
     }
 
     fun shareThreadDataset() = viewModelScope.launch {
-        runCatching {
-            val api = c.connector.session().api
-            val ds = api.threadDatasets().first { it.preferred }
-            api.setThreadDataset(api.threadDatasetTlv(ds.id))
-        }.onSuccess { _result.value = UiResult.Message(io.github.dwicki.matthair.R.string.thread_shared) }
-            .onFailure { _result.value = UiResult.Error(it.message ?: "?") }
+        action(R.string.thread_shared) {
+            val preferred = api().threadDatasets().first { it.preferred }
+            api().setThreadDataset(api().threadDatasetTlv(preferred.id))
+        }
         runCheck()
     }
 
-    // --- Settings ------------------------------------------------------------------------------
+    // --- Settings ---------------------------------------------------------------------------------
 
-    fun setShowDetails(v: Boolean) { c.config.showDetails = v; showDetails.value = v }
+    fun setShowDetails(enabled: Boolean) {
+        container.config.showDetails = enabled
+        showDetails.value = enabled
+    }
 
-    fun permitZigbee(z2m: Boolean) = viewModelScope.launch {
-        runCatching {
-            val api = c.connector.session().api
-            if (z2m) api.z2mPermitJoin(240) else api.zhaPermitJoin(240)
-        }.onSuccess { _result.value = UiResult.Message(io.github.dwicki.matthair.R.string.settings_zigbee_started) }
-            .onFailure { _result.value = UiResult.Error(it.message ?: "?") }
+    fun permitZigbee(zigbee2mqtt: Boolean) = viewModelScope.launch {
+        action(R.string.settings_zigbee_started) {
+            if (zigbee2mqtt) api().z2mPermitJoin(PERMIT_JOIN_SECONDS) else api().zhaPermitJoin(PERMIT_JOIN_SECONDS)
+        }
     }
 
     fun buildDiagnostics(onReady: (File) -> Unit) = viewModelScope.launch {
-        _busy.value = true
-        val f = runCatching { Diagnostics.buildBundle(getApplication(), c.connector) }.getOrNull()
-        _busy.value = false
-        f?.let(onReady)
+        action { Diagnostics.buildBundle(getApplication(), container.connector) }.onSuccess(onReady)
     }
 
-    companion object {
-        /** The typed URL first, then http/https × (default port, 8123) variants. */
-        fun urlCandidates(typed: String): List<String> {
-            val uri = URI(typed)
-            val host = uri.host ?: return listOf(typed)
-            val hostPart = if (host.contains(':')) "[$host]" else host
-            val path = (uri.rawPath ?: "").trimEnd('/')
-            val variants = buildList {
-                add(typed)
-                if (uri.port == -1) {
-                    for (scheme in listOf("http", "https")) {
-                        add("$scheme://$hostPart:8123$path")
-                        add("$scheme://$hostPart$path")
-                    }
-                } else {
-                    val other = if (uri.scheme.equals("https", true)) "http" else "https"
-                    add("$other://$hostPart:${uri.port}$path")
-                }
-            }
-            return variants.distinct()
-        }
-
-        fun normalizeUrl(input: String): String {
-            var s = input.trim().trimEnd('/')
-            if (!s.startsWith("http://", true) && !s.startsWith("https://", true)) s = "http://$s"
-            return s
-        }
-
-        fun isValidUrl(input: String): Boolean = runCatching {
-            val u = URI(normalizeUrl(input))
-            !u.host.isNullOrBlank()
-        }.getOrDefault(false)
+    private companion object {
+        const val TAG = "ViewModel"
+        const val PERMIT_JOIN_SECONDS = 240
     }
 }

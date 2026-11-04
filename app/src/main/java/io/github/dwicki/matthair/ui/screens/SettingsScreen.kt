@@ -94,8 +94,8 @@ fun SettingsScreen(vm: MainViewModel, onBack: () -> Unit, onSignedOut: () -> Uni
                 headlineContent = { Text(stringResource(R.string.settings_zigbee_desc)) },
                 supportingContent = {
                     Column {
-                        OutlinedButton({ vm.permitZigbee(z2m = false) }, Modifier.padding(top = 8.dp)) { Text(stringResource(R.string.settings_zigbee_zha)) }
-                        OutlinedButton({ vm.permitZigbee(z2m = true) }) { Text(stringResource(R.string.settings_zigbee_z2m)) }
+                        OutlinedButton({ vm.permitZigbee(zigbee2mqtt = false) }, Modifier.padding(top = 8.dp)) { Text(stringResource(R.string.settings_zigbee_zha)) }
+                        OutlinedButton({ vm.permitZigbee(zigbee2mqtt = true) }) { Text(stringResource(R.string.settings_zigbee_z2m)) }
                     }
                 },
             )

@@ -61,6 +61,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import io.github.dwicki.matthair.R
+import io.github.dwicki.matthair.ha.ServerProbe
 import io.github.dwicki.matthair.ha.HaAuth
 import io.github.dwicki.matthair.ha.HttpClients
 import io.github.dwicki.matthair.ui.MainViewModel
@@ -115,7 +116,7 @@ fun ServerScreen(vm: MainViewModel, onBack: () -> Unit, onReady: () -> Unit) {
     val busy by vm.busy.collectAsState()
     val cert by vm.certPrompt.collectAsState()
     val problem by vm.serverProblem.collectAsState()
-    val valid = MainViewModel.isValidUrl(local)
+    val valid = ServerProbe.isValidUrl(local)
 
     Scaffold(topBar = {
         TopAppBar(title = {}, navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back)) } })
@@ -142,11 +143,11 @@ fun ServerScreen(vm: MainViewModel, onBack: () -> Unit, onReady: () -> Unit) {
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
                 modifier = Modifier.fillMaxWidth(),
             )
-            (problem as? MainViewModel.ServerProblem.Unreachable)?.let { p ->
+            problem?.let { p ->
                 Spacer(Modifier.height(16.dp))
                 Banner(stringResource(R.string.server_unreachable, p.tried.drop(1).joinToString("\n")), BannerKind.ERROR)
             }
-            if (valid && MainViewModel.normalizeUrl(local).startsWith("http://")) {
+            if (valid && ServerProbe.normalizeUrl(local).startsWith("http://")) {
                 Spacer(Modifier.height(16.dp))
                 Banner(stringResource(R.string.server_http_warning), BannerKind.INFO)
             }
