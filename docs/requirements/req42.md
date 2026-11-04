@@ -74,7 +74,7 @@ Thread secrets on the phone, controlling devices (on/off etc.), cloud features.
 | ID | Requirement | Acceptance criteria | Status |
 |----|-------------|---------------------|--------|
 | F-1.1 | Configure local URL and optional external URL | Local URL tried first, external as fallback | ✅ |
-| F-1.2 | Sign in with HA login (OAuth2) | HA's own login page; code exchanged for tokens; refresh handled | 🔬 |
+| F-1.2 | Sign in with HA login (OAuth2) | HA's own login page; code exchanged for tokens; refresh handled | ✅ verified on device |
 | F-1.3 | Sign in with long-lived access token | Token verified with `auth/current_user` | ✅ |
 | F-1.4 | Store tokens only encrypted (Android Keystore) | No plaintext token in prefs or logs | ✅ |
 | F-1.5 | Reach the Matter Server only through authenticated HA ingress | No direct connection to port 5580 | ✅ |
