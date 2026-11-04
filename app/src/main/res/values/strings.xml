@@ -122,7 +122,7 @@
     <string name="check_help_BATTERY">Battery optimisation may stop pairing when the screen turns off.</string>
     <string name="check_help_NETWORK">On mobile data the phone may lose Home Assistant during pairing.</string>
     <string name="check_help_THREAD">Only needed for Thread devices: set a preferred Thread network in Home Assistant (Settings → Thread) with an online border router.</string>
-    <string name="check_help_WIFI">Only needed for Wi-Fi devices: store your 2.4 GHz network so Home Assistant can pass it on.</string>
+    <string name="check_help_WIFI">Only needed for Wi-Fi devices, once: store your 2.4 GHz network so Home Assistant can pass it on. Thread devices do not need it.</string>
     <string name="check_help_OTHER_PROXIES">Home Assistant has its own Bluetooth adapters or proxies. If one of them sees the device first, it is used instead of this phone.</string>
     <string name="check_help_DEVICE_weak">Weak signal. Move closer to the device.</string>
     <string name="check_help_DEVICE_missing">Not found yet. Make sure the device is powered and in pairing mode.</string>
@@ -140,6 +140,15 @@
     <string name="wifi_body">Matter Wi-Fi devices only use 2.4 GHz. The details are stored in Home Assistant\'s Matter server, not on this phone.</string>
     <string name="wifi_ssid">Network name (SSID)</string>
     <string name="wifi_password">Password</string>
+    <string name="wifi_only_for_wifi">Only needed for Wi-Fi devices, and only once. Thread devices do not need it, so you can skip this.</string>
+    <string name="wifi_scan_qr">Scan Wi-Fi QR</string>
+    <string name="wifi_qr_hint">Many routers have a Wi-Fi QR code on a sticker. Another phone can show one under Settings → Wi-Fi → your network → Share.</string>
+    <string name="wifi_no_qr">No Wi-Fi QR code found in this picture.</string>
+    <string name="wifi_from_qr">Network name and password taken from the QR code.</string>
+    <string name="wifi_use_current">Use current network</string>
+    <string name="wifi_fill_hint">Android only shows the name of your current network to apps with location permission. It is used for nothing else.</string>
+    <string name="wifi_5ghz_note">Your phone is on 5 GHz right now. Matter devices need 2.4 GHz, so make sure this network also offers 2.4 GHz.</string>
+    <string name="wifi_skip">Skip (Thread device)</string>
     <string name="thread_shared">Thread network handed to the Matter server</string>
 
     <!-- Pairing -->

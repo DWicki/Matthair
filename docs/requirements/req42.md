@@ -89,7 +89,8 @@ Thread secrets on the phone, controlling devices (on/off etc.), cloud features.
 | F-2.2 | Matter Server running, version ≥ 9, `ble_proxy` enabled, `/ble` reachable | `/ble` verified with a real `hello` handshake | ✅ |
 | F-2.3 | Offer to enable `ble_proxy` | Only after confirmation; app is restarted via Supervisor | 🔬 |
 | F-2.4 | Thread: preferred dataset in HA, border router online | Count of border routers via `thread/discover_routers` | ✅ |
-| F-2.5 | Wi-Fi credentials known to Matter Server | `wifi_credentials_set` from server info; optional entry | ✅ |
+| F-2.5 | Wi-Fi credentials known to Matter Server | `wifi_credentials_set` from server info; entry only for Wi-Fi devices, once | ✅ |
+| F-2.5a | Avoid typing Wi-Fi data (Android does not expose saved passwords to apps) | SSID pre-filled from the current connection (location permission, asked on demand); `WIFI:` QR code (router sticker / Android *Share*) via camera or photo fills SSID + password; 5 GHz hint | ✅ |
 | F-2.6 | Warn about other BLE proxies | Warning if HA has loaded Bluetooth config entries | 🟡 heuristic |
 | F-2.7 | Find the device before starting | RSSI shown; "move closer" below −80 dBm | ✅ |
 

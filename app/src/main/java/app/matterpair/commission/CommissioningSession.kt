@@ -316,7 +316,14 @@ class CommissioningSession(
         _state.update { it.copy(waitingForPreviousAttempt = false) }
     }
 
-    private fun setPhase(p: Phase) = _state.update { if (p.ordinal > it.phase.ordinal || p == Phase.SEARCHING && it.phase == Phase.PREPARING) it.copy(phase = p) else it }
+    private fun setPhase(p: Phase) = _state.update {
+        if (p.ordinal > it.phase.ordinal) {
+            // Logged so that a diagnostic bundle shows how far a failed attempt got.
+            val elapsed = (System.currentTimeMillis() - it.startedAtMillis) / 1000
+            AppLog.i(TAG, "Phase ${it.phase} -> $p after ${elapsed}s (attempt ${it.attempt})")
+            it.copy(phase = p)
+        } else it
+    }
 
     private fun fail(kind: FailureKind, detail: String? = null) {
         AppLog.w(TAG, "Failure: $kind ${detail.orEmpty()}")

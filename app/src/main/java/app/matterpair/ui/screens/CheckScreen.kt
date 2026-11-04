@@ -80,14 +80,13 @@ import app.matterpair.ui.flowLabel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CheckScreen(vm: MainViewModel, onBack: () -> Unit, onStart: () -> Unit) {
+fun CheckScreen(vm: MainViewModel, onBack: () -> Unit, onStart: () -> Unit, onWifi: () -> Unit) {
     val payload by vm.payload.collectAsState()
     val report by vm.environment.collectAsState()
     val details by vm.showDetails.collectAsState()
     val ctx = LocalContext.current
     var showOk by rememberSaveable { mutableStateOf(false) }
     var proxyDialog by remember { mutableStateOf(false) }
-    var wifiDialog by remember { mutableStateOf(false) }
 
     val permissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { vm.runCheck() }
     val enableBt = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { vm.runCheck() }
@@ -100,7 +99,7 @@ fun CheckScreen(vm: MainViewModel, onBack: () -> Unit, onStart: () -> Unit) {
         )
         CheckAction.BATTERY_SETTINGS -> ctx.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
         CheckAction.ENABLE_BLE_PROXY -> proxyDialog = true
-        CheckAction.SET_WIFI -> wifiDialog = true
+        CheckAction.SET_WIFI -> onWifi()
         CheckAction.SHARE_THREAD -> vm.shareThreadDataset()
     }
 
@@ -192,7 +191,6 @@ fun CheckScreen(vm: MainViewModel, onBack: () -> Unit, onStart: () -> Unit) {
             dismissButton = { TextButton({ proxyDialog = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
-    if (wifiDialog) WifiDialog(onDismiss = { wifiDialog = false }) { ssid, pw -> wifiDialog = false; vm.setWifi(ssid, pw) }
 }
 
 @Composable
@@ -249,25 +247,3 @@ private fun Field(label: String, value: String) {
         Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
     }
 }
-
-@Composable
-private fun WifiDialog(onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
-    var ssid by remember { mutableStateOf("") }
-    var pw by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.wifi_title)) },
-        text = {
-            Column {
-                Text(stringResource(R.string.wifi_body))
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(ssid, { ssid = it }, label = { Text(stringResource(R.string.wifi_ssid)) }, singleLine = true)
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(pw, { pw = it }, label = { Text(stringResource(R.string.wifi_password)) }, singleLine = true, visualTransformation = PasswordVisualTransformation())
-            }
-        },
-        confirmButton = { TextButton({ onSave(ssid, pw) }, enabled = ssid.isNotBlank()) { Text(stringResource(R.string.action_save)) } },
-        dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.action_cancel)) } },
-    )
-}
-

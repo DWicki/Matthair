@@ -49,6 +49,7 @@ import app.matterpair.ui.screens.ScanScreen
 import app.matterpair.ui.screens.ServerScreen
 import app.matterpair.ui.screens.SettingsScreen
 import app.matterpair.ui.screens.WelcomeScreen
+import app.matterpair.ui.screens.WifiScreen
 import app.matterpair.ui.theme.MatterPairTheme
 import app.matterpair.util.Diagnostics
 
@@ -63,6 +64,7 @@ private object Routes {
     const val CHECK = "add/check"
     const val PAIRING = "add/pairing"
     const val DONE = "add/done"
+    const val WIFI = "add/wifi"
     const val DEVICES = "devices"
     const val SETTINGS = "settings"
     const val MULTI_INTRO = "multi/intro"
@@ -198,8 +200,10 @@ class MainActivity : ComponentActivity() {
                         vm,
                         onBack = { navController.popBackStack(Routes.HOME, false) },
                         onStart = { vm.startCommissioning(); navController.navigate(Routes.PAIRING) },
+                        onWifi = { navController.navigate(Routes.WIFI) },
                     )
                 }
+                composable(Routes.WIFI) { WifiScreen(vm) { navController.popBackStack() } }
                 composable(Routes.PAIRING) {
                     PairingScreen(
                         vm,

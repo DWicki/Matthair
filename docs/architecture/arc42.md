@@ -201,6 +201,7 @@ Distribution: F-Droid (reproducible build) and plain APK. No Play Store dependen
   confirms its fingerprint, and the WebView applies the same pin.
 * **Passcode:** lives in `SetupPayload` in memory, is masked in the UI, registered as a log
   secret during the run and dropped after the wizard.
+* **Location permission** is requested only when the user taps "Use current network" on the Wi-Fi screen. Android reveals the connected SSID only to apps holding it. It is never used for anything else. Wi-Fi passwords cannot be read by apps at all, which is why the `WIFI:` QR scan exists (`WifiQr`, `CurrentWifi`).
 * **No outbound traffic** except to the configured HA URLs. There is no analytics, crash
   reporting or update check.
 

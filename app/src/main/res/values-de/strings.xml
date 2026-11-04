@@ -120,7 +120,7 @@
     <string name="check_help_BATTERY">Die Akku-Optimierung kann die Kopplung abbrechen, wenn der Bildschirm ausgeht.</string>
     <string name="check_help_NETWORK">Mit mobilen Daten kann das Handy während der Kopplung die Verbindung zu Home Assistant verlieren.</string>
     <string name="check_help_THREAD">Nur für Thread-Geräte nötig: Lege in Home Assistant ein bevorzugtes Thread-Netz fest (Einstellungen → Thread), mit einem Border Router, der online ist.</string>
-    <string name="check_help_WIFI">Nur für WLAN-Geräte nötig: Hinterlege dein 2,4-GHz-Netz, damit Home Assistant es weitergeben kann.</string>
+    <string name="check_help_WIFI">Nur für WLAN-Geräte nötig, einmalig: Hinterlege dein 2,4-GHz-Netz, damit Home Assistant es weitergeben kann. Thread-Geräte brauchen das nicht.</string>
     <string name="check_help_OTHER_PROXIES">Home Assistant hat eigene Bluetooth-Adapter oder -Proxys. Sieht einer davon das Gerät zuerst, wird er statt des Handys genutzt.</string>
     <string name="check_help_DEVICE_weak">Schwaches Signal. Geh näher an das Gerät heran.</string>
     <string name="check_help_DEVICE_missing">Noch nicht gefunden. Prüfe, ob das Gerät Strom hat und im Kopplungsmodus ist.</string>
@@ -138,6 +138,15 @@
     <string name="wifi_body">Matter-WLAN-Geräte nutzen nur 2,4 GHz. Die Daten werden im Matter-Server von Home Assistant gespeichert, nicht auf diesem Handy.</string>
     <string name="wifi_ssid">Netzwerkname (SSID)</string>
     <string name="wifi_password">Passwort</string>
+    <string name="wifi_only_for_wifi">Nur für WLAN-Geräte nötig, und nur einmal. Thread-Geräte brauchen das nicht, dann kannst du es überspringen.</string>
+    <string name="wifi_scan_qr">WLAN-QR scannen</string>
+    <string name="wifi_qr_hint">Viele Router haben einen WLAN-QR-Code auf einem Aufkleber. Ein anderes Handy zeigt ihn unter Einstellungen → WLAN → dein Netz → Teilen.</string>
+    <string name="wifi_no_qr">In diesem Bild wurde kein WLAN-QR-Code gefunden.</string>
+    <string name="wifi_from_qr">Netzwerkname und Passwort aus dem QR-Code übernommen.</string>
+    <string name="wifi_use_current">Aktuelles Netz verwenden</string>
+    <string name="wifi_fill_hint">Android zeigt den Namen des aktuellen Netzes nur Apps mit Standortberechtigung. Sie wird für nichts anderes genutzt.</string>
+    <string name="wifi_5ghz_note">Dein Handy ist gerade im 5-GHz-Netz. Matter-Geräte brauchen 2,4 GHz, das Netz muss also auch 2,4 GHz anbieten.</string>
+    <string name="wifi_skip">Überspringen (Thread-Gerät)</string>
     <string name="thread_shared">Thread-Netz an den Matter-Server übergeben</string>
 
     <!-- Pairing -->

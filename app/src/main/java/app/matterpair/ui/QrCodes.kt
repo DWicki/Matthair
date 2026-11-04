@@ -59,7 +59,11 @@ object QrCodes {
     }
 
     /** CameraX analyzer reading the Y plane only (fast, no color conversion). */
-    class Analyzer(private val onResult: (String) -> Unit) : ImageAnalysis.Analyzer {
+    class Analyzer(
+        /** Which decoded texts to accept; default: Matter payloads. */
+        private val accept: (String) -> Boolean = { it.contains("MT:", ignoreCase = true) },
+        private val onResult: (String) -> Unit,
+    ) : ImageAnalysis.Analyzer {
         @Volatile private var done = false
         override fun analyze(image: ImageProxy) {
             image.use {
@@ -69,7 +73,7 @@ object QrCodes {
                 val data = ByteArray(buf.remaining()).also { b -> buf.get(b) }
                 val source = PlanarYUVLuminanceSource(data, plane.rowStride, it.height, 0, 0, it.width, it.height, false)
                 val text = decode(source) ?: return
-                if (text.contains("MT:", ignoreCase = true)) {
+                if (accept(text)) {
                     done = true
                     onResult(text)
                 }

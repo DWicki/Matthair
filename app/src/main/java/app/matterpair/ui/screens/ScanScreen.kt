@@ -163,7 +163,7 @@ fun ScanScreen(
                             .background(Color.Black),
                         contentAlignment = Alignment.Center,
                     ) {
-                        if (hasCamera) CameraPreview(onCode = { scope.launch { handle(it) } })
+                        if (hasCamera) QrCameraPreview(onCode = { scope.launch { handle(it) } })
                         else FilledTonalButton({ cameraPermission.launch(Manifest.permission.CAMERA) }) {
                             Icon(Icons.Rounded.PhotoCamera, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.scan_grant_camera))
                         }
@@ -206,8 +206,9 @@ fun ScanScreen(
     }
 }
 
+/** Live camera preview that reports the first QR code accepted by [accept]. Shared by the setup-code and Wi-Fi screens. */
 @Composable
-private fun CameraPreview(onCode: (String) -> Unit) {
+internal fun QrCameraPreview(accept: (String) -> Boolean = { it.contains("MT:", ignoreCase = true) }, onCode: (String) -> Unit) {
     val ctx = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val executor = remember { Executors.newSingleThreadExecutor() }
@@ -223,7 +224,7 @@ private fun CameraPreview(onCode: (String) -> Unit) {
                 val analysis = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
-                    .also { it.setAnalyzer(executor, QrCodes.Analyzer { text -> previewView.post { onCode(text) } }) }
+                    .also { it.setAnalyzer(executor, QrCodes.Analyzer(accept) { text -> previewView.post { onCode(text) } }) }
                 runCatching {
                     provider.unbindAll()
                     provider.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
