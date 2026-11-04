@@ -96,7 +96,7 @@ has no Android dependencies.
 | `GattConnection` | Strictly sequential GATT ops, connect retry, MTU/priority, notification callback | BleProxyClient |
 | `BleProxyClient` | Proxy protocol: hello, 12 commands, 4 events, binary frames, device filtering, per-connection queues | GattConnection, BleScanner, BtpObserver |
 | `HaWebSocket` | HA WS API: auth, id-based calls, subscriptions | OkHttp |
-| `HaApi` | Typed commands: supervisor, matter, registries, Thread, Zigbee | HaWebSocket |
+| `HaApi` | Typed commands: supervisor, matter, registries, Thread | HaWebSocket |
 | `IngressSession` | Create and keep alive the ingress session, build `/ble` and `/ws` requests | HaApi |
 | `MatterServerClient` | Server info (Wi-Fi/Thread credentials set), nodes, events | IngressSession |
 | `CommissioningSession` | The whole add-device run, retries, failure classification, state flow | all of the above |

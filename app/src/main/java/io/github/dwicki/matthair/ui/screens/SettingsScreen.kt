@@ -85,18 +85,6 @@ fun SettingsScreen(vm: MainViewModel, onBack: () -> Unit, onSignedOut: () -> Uni
                 modifier = Modifier.clickableItem(onShareDiagnostics),
             )
             HorizontalDivider()
-            GroupHeader(stringResource(R.string.settings_zigbee))
-            ListItem(
-                leadingContent = { Icon(Icons.Rounded.Wifi, null) },
-                headlineContent = { Text(stringResource(R.string.settings_zigbee_desc)) },
-                supportingContent = {
-                    Column {
-                        OutlinedButton({ vm.permitZigbee(zigbee2mqtt = false) }, Modifier.padding(top = 8.dp)) { Text(stringResource(R.string.settings_zigbee_zha)) }
-                        OutlinedButton({ vm.permitZigbee(zigbee2mqtt = true) }) { Text(stringResource(R.string.settings_zigbee_z2m)) }
-                    }
-                },
-            )
-            HorizontalDivider()
             ListItem(
                 leadingContent = { Icon(Icons.Rounded.Info, null) },
                 headlineContent = { Text("${stringResource(R.string.settings_about)} · ${BuildConfig.VERSION_NAME}") },

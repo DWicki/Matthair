@@ -346,18 +346,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         showDetails.value = enabled
     }
 
-    fun permitZigbee(zigbee2mqtt: Boolean) = viewModelScope.launch {
-        action(R.string.settings_zigbee_started) {
-            if (zigbee2mqtt) api().z2mPermitJoin(PERMIT_JOIN_SECONDS) else api().zhaPermitJoin(PERMIT_JOIN_SECONDS)
-        }
-    }
-
     fun buildDiagnostics(onReady: (File) -> Unit) = viewModelScope.launch {
         action { Diagnostics.buildBundle(getApplication(), container.connector) }.onSuccess(onReady)
     }
 
     private companion object {
         const val TAG = "ViewModel"
-        const val PERMIT_JOIN_SECONDS = 240
     }
 }

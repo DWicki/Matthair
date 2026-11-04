@@ -178,22 +178,6 @@ class HaApi(val ws: HaWebSocket, private val http: OkHttpClient, private val bas
         return seen.size
     }
 
-    // --- Zigbee (optional extra) ----------------------------------------------------------------
-
-    suspend fun zhaPermitJoin(seconds: Int) {
-        withTimeoutOrNull(10_000) {
-            ws.subscribe("zha/devices/permit", mapOf("duration" to seconds.json)).take(1).toList()
-        }
-    }
-
-    suspend fun z2mPermitJoin(seconds: Int, baseTopic: String = "zigbee2mqtt") {
-        val serviceData = buildJsonObject {
-            put("topic", "$baseTopic/bridge/request/permit_join")
-            put("payload", "{\"time\":$seconds}")
-        }
-        ws.call("call_service", mapOf("domain" to "mqtt".json, "service" to "publish".json, "service_data" to serviceData))
-    }
-
     private companion object {
         const val TAG = "HaApi"
 

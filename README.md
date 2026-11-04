@@ -66,7 +66,6 @@ flowchart LR
 
 **Everything else**
 - English and German, light and dark theme, Material You colours
-- Optional: start Zigbee pairing mode for ZHA or Zigbee2MQTT
 
 ## Requirements
 

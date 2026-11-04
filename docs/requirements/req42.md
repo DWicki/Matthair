@@ -136,7 +136,7 @@ Thread secrets on the phone, controlling devices (on/off etc.), cloud features.
 | F-6.1 | Multi-admin: add from another ecosystem via network | `network_only=true`, no BLE | ✅ |
 | F-6.2 | Open a commissioning window to share a device | QR and manual code shown | ✅ |
 | F-6.3 | Node list incl. offline devices; remove | Availability from Matter Server `get_nodes` | ✅ |
-| F-6.4 | Zigbee permit join (optional) | ZHA and Zigbee2MQTT | 🔬 |
+| F-6.4 | Zigbee permit join (optional) | ZHA and Zigbee2MQTT; removed for 1.0.0, planned for a later release | ⏳ |
 | F-6.5 | Diagnostic bundle | App log + Matter Server log tail, tokens and codes redacted, shared via share sheet | ✅ |
 | F-6.6 | Device overview: status, network (Thread/Wi-Fi), device info, connected ecosystems | Data from device registry + `matter/node_diagnostics` | 🔬 |
 | F-6.7 | Rename device and change room from the app | `config/device_registry/update`; empty name restores the device's own name; new rooms created on save | 🔬 |

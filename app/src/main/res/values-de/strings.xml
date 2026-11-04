@@ -266,11 +266,6 @@
     <string name="settings_show_details_desc">Hersteller- und Produkt-IDs, Signalstärke, genaue Phasen</string>
     <string name="settings_diagnostics">Diagnose</string>
     <string name="settings_diagnostics_desc">App-Log und Matter-Server-Log, ohne Tokens und Codes</string>
-    <string name="settings_zigbee">Zigbee</string>
-    <string name="settings_zigbee_desc">Neue Zigbee-Geräte 4 Minuten lang beitreten lassen</string>
-    <string name="settings_zigbee_zha">Beitritt erlauben (ZHA)</string>
-    <string name="settings_zigbee_z2m">Beitritt erlauben (Zigbee2MQTT)</string>
-    <string name="settings_zigbee_started">Zigbee-Geräte können jetzt beitreten</string>
     <string name="settings_about">Über</string>
     <string name="settings_about_desc">Open Source unter GPL-3.0. Keine Telemetrie. Spricht nur mit deinem Home Assistant.</string>
     <string name="settings_language">Sprache</string>

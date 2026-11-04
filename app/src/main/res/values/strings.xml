@@ -268,11 +268,6 @@
     <string name="settings_show_details_desc">Vendor and product IDs, signal strength, raw phases</string>
     <string name="settings_diagnostics">Diagnostics</string>
     <string name="settings_diagnostics_desc">App log and Matter Server log, with tokens and codes removed</string>
-    <string name="settings_zigbee">Zigbee</string>
-    <string name="settings_zigbee_desc">Let new Zigbee devices join for 4 minutes</string>
-    <string name="settings_zigbee_zha">Permit join (ZHA)</string>
-    <string name="settings_zigbee_z2m">Permit join (Zigbee2MQTT)</string>
-    <string name="settings_zigbee_started">Zigbee devices can join now</string>
     <string name="settings_about">About</string>
     <string name="settings_about_desc">Open source under GPL-3.0. No telemetry. Only talks to your Home Assistant.</string>
     <string name="settings_language">Language</string>
