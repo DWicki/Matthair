@@ -17,10 +17,9 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/home.png" width="23%" alt="Home screen">
-  <img src="docs/screenshots/check.png" width="23%" alt="Pre-flight check">
-  <img src="docs/screenshots/devices.png" width="23%" alt="Device list">
-  <img src="docs/screenshots/device.png" width="23%" alt="Device overview">
+  <img src="docs/screenshots/home.png" width="30%" alt="Home screen with your Matter devices">
+  <img src="docs/screenshots/scan.png" width="30%" alt="Scanning the setup code">
+  <img src="docs/screenshots/check.png" width="30%" alt="Traffic-light check before pairing">
 </p>
 
 ---
@@ -90,9 +89,9 @@ flowchart LR
 
 <p align="center">
   <img src="docs/screenshots/welcome.png" width="23%" alt="Welcome">
-  <img src="docs/screenshots/scan.png" width="23%" alt="Scan the code">
-  <img src="docs/screenshots/wifi.png" width="23%" alt="Wi-Fi credentials">
-  <img src="docs/screenshots/settings.png" width="23%" alt="Settings">
+  <img src="docs/screenshots/server.png" width="23%" alt="Enter the Home Assistant address">
+  <img src="docs/screenshots/signin.png" width="23%" alt="Choose how to sign in">
+  <img src="docs/screenshots/login.png" width="23%" alt="Home Assistant's own login page">
 </p>
 
 ## FAQ
