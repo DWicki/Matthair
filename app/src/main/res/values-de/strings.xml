@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Generic -->
+    <string name="action_continue">Weiter</string>
+    <string name="action_cancel">Abbrechen</string>
+    <string name="action_retry">Erneut versuchen</string>
+    <string name="action_done">Fertig</string>
+    <string name="action_save">Speichern</string>
+    <string name="action_close">Schließen</string>
+    <string name="action_back">Zurück</string>
+    <string name="action_skip">Überspringen</string>
+    <string name="action_fix">Beheben</string>
+    <string name="action_remove">Entfernen</string>
+    <string name="action_share_diagnostics">Diagnose teilen</string>
+    <string name="loading">Lädt…</string>
+    <string name="error_generic">Etwas ist schiefgelaufen: %1$s</string>
+
+    <!-- Onboarding -->
+    <string name="welcome_title">Matter-Geräte zu Home Assistant hinzufügen</string>
+    <string name="welcome_body">Dein Handy leiht Home Assistant kurz sein Bluetooth. Die eigentliche Kopplung macht Home Assistant, und das Gerät bleibt in deinem eigenen Netz.</string>
+    <string name="welcome_point_private">Keine Google-Dienste, keine Cloud, kein Tracking</string>
+    <string name="welcome_point_secure">Zugangsdaten bleiben verschlüsselt auf dem Handy</string>
+    <string name="welcome_point_ha">Für die Matter-Server-App ab Version 9</string>
+    <string name="welcome_start">Los geht\'s</string>
+    <string name="server_title">Mit Home Assistant verbinden</string>
+    <string name="server_local_label">Adresse von Home Assistant</string>
+    <string name="server_local_hint">z. B. http://homeassistant.local:8123</string>
+    <string name="server_external_label">Externe Adresse (optional)</string>
+    <string name="server_external_hint">Wird genutzt, wenn du nicht zu Hause bist</string>
+    <string name="server_http_warning">Diese Adresse ist unverschlüsselt. Im Heimnetz ist das üblich, für den Zugriff von außen solltest du HTTPS nutzen.</string>
+    <string name="server_invalid_url">Gib eine vollständige Adresse mit http:// oder https:// ein</string>
+    <string name="auth_title">Anmelden</string>
+    <string name="auth_oauth">Mit Home Assistant anmelden</string>
+    <string name="auth_oauth_desc">Empfohlen. Dein Passwort gibst du nur auf deiner eigenen Home-Assistant-Seite ein.</string>
+    <string name="auth_token">Langlebiges Zugriffstoken nutzen</string>
+    <string name="auth_token_desc">Erstellen kannst du es in Home Assistant unter Profil → Sicherheit.</string>
+    <string name="auth_token_label">Zugriffstoken</string>
+    <string name="auth_admin_required">Zum Hinzufügen von Geräten brauchst du ein Administratorkonto.</string>
+    <string name="auth_checking">Verbindung wird geprüft…</string>
+    <string name="auth_failed">Anmeldung fehlgeschlagen: %1$s</string>
+    <string name="cert_title">Diesem Zertifikat vertrauen?</string>
+    <string name="cert_body">Der Server nutzt ein Zertifikat, dem dieses Handy nicht vertraut, zum Beispiel ein selbstsigniertes. Fahre nur fort, wenn dieser Fingerabdruck zu deinem Home Assistant gehört:\n\n%1$s</string>
+    <string name="cert_trust">Vertrauen</string>
+
+    <!-- Home -->
+    <string name="home_title">Matter</string>
+    <string name="home_add_device">Gerät hinzufügen</string>
+    <string name="home_add_hero_title">Matter-Gerät hinzufügen</string>
+    <string name="home_add_hero_body">Scanne den Code am Gerät. WLAN- und Thread-Geräte werden unterstützt.</string>
+    <string name="home_devices">Deine Geräte</string>
+    <string name="home_no_devices">Noch keine Matter-Geräte</string>
+    <string name="home_status_connected">Verbunden mit Home Assistant %1$s</string>
+    <string name="home_status_offline">Home Assistant ist nicht erreichbar</string>
+    <string name="home_status_connecting">Verbinde…</string>
+    <string name="home_more_devices">Alle anzeigen (%1$d)</string>
+    <string name="home_from_other_app">Aus anderer App übernehmen</string>
+    <string name="home_from_other_app_desc">Schon mit einer anderen App oder einem Hub eingerichtet? Füge es zusätzlich hier hinzu, über das Netzwerk.</string>
+    <string name="device_online">Online</string>
+    <string name="device_offline">Offline</string>
+
+    <!-- Wizard -->
+    <string name="step_scan">Scannen</string>
+    <string name="step_check">Prüfen</string>
+    <string name="step_connect">Koppeln</string>
+    <string name="step_name">Abschluss</string>
+    <string name="scan_title">Code scannen</string>
+    <string name="scan_hint">Den Matter-QR-Code findest du am Gerät, auf der Verpackung oder in der Anleitung</string>
+    <string name="scan_manual">Code eintippen</string>
+    <string name="scan_from_photo">Aus Foto</string>
+    <string name="scan_nfc_hint">Du kannst auch einen NFC-Tag ans Handy halten</string>
+    <string name="scan_camera_denied">Zum Scannen braucht die App die Kamera. Du kannst den Code auch eintippen.</string>
+    <string name="scan_grant_camera">Kamera erlauben</string>
+    <string name="scan_no_code_in_image">In diesem Bild wurde kein Matter-QR-Code gefunden.</string>
+    <string name="manual_title">Code eingeben</string>
+    <string name="manual_hint">Die 11- oder 21-stellige Zahl neben dem QR-Code</string>
+    <string name="manual_label">Kopplungscode</string>
+    <string name="manual_digits_left">%1$d Ziffern</string>
+
+    <string name="payload_error_EMPTY">Gib einen Code ein.</string>
+    <string name="payload_error_BAD_PREFIX">Das ist kein Matter-Code.</string>
+    <string name="payload_error_BAD_BASE38">Dieser QR-Code ist beschädigt oder kein Matter-Code.</string>
+    <string name="payload_error_TOO_SHORT">Dieser QR-Code ist unvollständig.</string>
+    <string name="payload_error_BAD_LENGTH">Ein Kopplungscode hat 11 oder 21 Ziffern.</string>
+    <string name="payload_error_NOT_DIGITS">Der Kopplungscode besteht nur aus Ziffern.</string>
+    <string name="payload_error_BAD_CHECK_DIGIT">Im Code ist ein Tippfehler. Prüfe die Ziffern noch einmal.</string>
+    <string name="payload_error_INVALID_PASSCODE">Dieser Code ist für Matter nicht gültig.</string>
+    <string name="payload_error_BAD_VERSION">Dieser Code hat ein nicht unterstütztes Format.</string>
+
+    <string name="device_card_title">Matter-Gerät</string>
+    <string name="device_vendor">Hersteller</string>
+    <string name="device_product">Produkt</string>
+    <string name="device_discriminator">Discriminator</string>
+    <string name="device_discriminator_short">%1$d (kurz, aus manuellem Code)</string>
+    <string name="device_passcode">Passcode</string>
+    <string name="device_flow">Kopplungsmodus</string>
+    <string name="flow_STANDARD">Startet automatisch</string>
+    <string name="flow_USER_INTENT">Tastendruck nötig</string>
+    <string name="flow_CUSTOM">Hersteller-App nötig</string>
+    <string name="flow_RESERVED">Unbekannt</string>
+    <string name="flow_custom_warning">Dieses Gerät muss zuerst in der App des Herstellers vorbereitet werden. Öffne diese App, versetze das Gerät in den Kopplungsmodus und komm dann zurück.</string>
+    <string name="flow_user_intent_hint">Versetze das Gerät jetzt in den Kopplungsmodus, meist durch längeres Drücken seiner Taste.</string>
+
+    <string name="check_title">Vorbereitung</string>
+    <string name="check_subtitle">Wir prüfen, ob alles für die Kopplung bereit ist</string>
+    <string name="check_BLUETOOTH">Bluetooth ist an</string>
+    <string name="check_PERMISSIONS">Berechtigung „Geräte in der Nähe“</string>
+    <string name="check_BATTERY">Keine Akku-Einschränkung</string>
+    <string name="check_NETWORK">Handy ist im WLAN</string>
+    <string name="check_HA_ADMIN">Als Administrator angemeldet</string>
+    <string name="check_MATTER_APP">Matter-Server-App läuft</string>
+    <string name="check_BLE_PROXY_OPTION">BLE-Proxy ist aktiviert</string>
+    <string name="check_BLE_ENDPOINT">Handy kann als Bluetooth-Proxy dienen</string>
+    <string name="check_THREAD">Thread-Netz bereit</string>
+    <string name="check_WIFI">WLAN-Daten hinterlegt</string>
+    <string name="check_OTHER_PROXIES">Keine anderen Bluetooth-Proxys</string>
+    <string name="check_DEVICE">Gerät in der Nähe gefunden</string>
+    <string name="check_help_BATTERY">Die Akku-Optimierung kann die Kopplung abbrechen, wenn der Bildschirm ausgeht.</string>
+    <string name="check_help_NETWORK">Mit mobilen Daten kann das Handy während der Kopplung die Verbindung zu Home Assistant verlieren.</string>
+    <string name="check_help_THREAD">Nur für Thread-Geräte nötig: Lege in Home Assistant ein bevorzugtes Thread-Netz fest (Einstellungen → Thread), mit einem Border Router, der online ist.</string>
+    <string name="check_help_WIFI">Nur für WLAN-Geräte nötig: Hinterlege dein 2,4-GHz-Netz, damit Home Assistant es weitergeben kann.</string>
+    <string name="check_help_OTHER_PROXIES">Home Assistant hat eigene Bluetooth-Adapter oder -Proxys. Sieht einer davon das Gerät zuerst, wird er statt des Handys genutzt.</string>
+    <string name="check_help_DEVICE_weak">Schwaches Signal. Geh näher an das Gerät heran.</string>
+    <string name="check_help_DEVICE_missing">Noch nicht gefunden. Prüfe, ob das Gerät Strom hat und im Kopplungsmodus ist.</string>
+    <string name="check_help_MATTER_APP">Installiere und starte die Matter-Server-App (ab Version 9) in Home Assistant.</string>
+    <string name="check_help_BLE_PROXY_OPTION">Damit die Matter-Server-App das Handy nutzen kann, braucht sie die Option „ble_proxy“.</string>
+    <string name="check_multiple_candidates">%1$d Geräte passen zu diesem manuellen Code. Lass nur das gewünschte Gerät im Kopplungsmodus oder scanne stattdessen den QR-Code.</string>
+    <string name="check_other_matter_devices">%1$d andere Matter-Geräte in der Nähe sind im Kopplungsmodus.</string>
+    <string name="check_start">Zu Home Assistant hinzufügen</string>
+    <string name="check_start_anyway">Trotzdem hinzufügen</string>
+    <string name="check_details">Technische Details</string>
+    <string name="enable_proxy_title">BLE-Proxy aktivieren?</string>
+    <string name="enable_proxy_body">Dabei wird „ble_proxy“ in der Matter-Server-App gesetzt und die App neu gestartet. Matter-Geräte sind dann für einige Sekunden nicht erreichbar.</string>
+    <string name="enable_proxy_confirm">Aktivieren und neu starten</string>
+    <string name="wifi_title">WLAN für Matter-Geräte</string>
+    <string name="wifi_body">Matter-WLAN-Geräte nutzen nur 2,4 GHz. Die Daten werden im Matter-Server von Home Assistant gespeichert, nicht auf diesem Handy.</string>
+    <string name="wifi_ssid">Netzwerkname (SSID)</string>
+    <string name="wifi_password">Passwort</string>
+    <string name="thread_shared">Thread-Netz an den Matter-Server übergeben</string>
+
+    <!-- Pairing -->
+    <string name="pairing_title">Gerät wird hinzugefügt</string>
+    <string name="pairing_keep_close">Halte das Handy in der Nähe des Geräts</string>
+    <string name="phase_preparing">Vorbereitung</string>
+    <string name="phase_searching">Gerät wird gesucht</string>
+    <string name="phase_ble">Per Bluetooth verbunden</string>
+    <string name="phase_pase">Sichere Verbindung wird aufgebaut</string>
+    <string name="phase_attestation">Gerät wird überprüft</string>
+    <string name="phase_network">Gerät wird ins Netz eingebunden</string>
+    <string name="phase_case">Abschluss</string>
+    <string name="phase_done">Gerät hinzugefügt</string>
+    <string name="pairing_attempt">Versuch %1$d von %2$d</string>
+    <string name="pairing_elapsed">%1$d s</string>
+    <string name="pairing_waiting_previous">Warte, bis der vorige Versuch beendet ist…</string>
+    <string name="warn_move_closer">Schwaches Signal (%1$d dBm). Geh näher an das Gerät heran.</string>
+    <string name="warn_other_proxy">Ein anderer Bluetooth-Proxy hat das Gerät offenbar übernommen. Das kann länger dauern oder scheitern. Schalte in dem Fall ESPHome-Proxys in der Nähe kurz ab.</string>
+    <string name="warn_cellular">Das Handy ist auf mobile Daten gewechselt. Bleib im WLAN, bis die Kopplung fertig ist.</string>
+    <string name="cancel_confirm_title">Hinzufügen abbrechen?</string>
+    <string name="cancel_confirm_body">Die Bluetooth-Verbindung wird sofort getrennt. Du kannst es danach ohne Zurücksetzen des Geräts erneut versuchen.</string>
+    <string name="cancel_confirm_yes">Abbrechen</string>
+    <string name="cancel_confirm_no">Weitermachen</string>
+
+    <string name="fail_title">Gerät konnte nicht hinzugefügt werden</string>
+    <string name="fail_NOT_ADMIN">Dein Home-Assistant-Benutzer ist kein Administrator.</string>
+    <string name="fail_NO_MATTER_APP">Die Matter-Server-App wurde nicht gefunden oder läuft nicht.</string>
+    <string name="fail_PROXY_UNAVAILABLE">Das Handy konnte sich nicht als Bluetooth-Proxy verbinden. Prüfe, ob „ble_proxy“ in der Matter-Server-App aktiviert ist.</string>
+    <string name="fail_DEVICE_NOT_FOUND">Das Gerät wurde nicht gefunden.</string>
+    <string name="fail_OTHER_PROXY">Ein anderer Bluetooth-Proxy hat das Gerät übernommen und die Kopplung nicht abgeschlossen.</string>
+    <string name="fail_BLE_ERROR">Die Bluetooth-Verbindung ist immer wieder abgebrochen.</string>
+    <string name="fail_PASE_FAILED">Das Gerät hat den Code abgelehnt.</string>
+    <string name="fail_ATTESTATION_FAILED">Das Gerät konnte nicht als zertifiziertes Matter-Gerät bestätigt werden.</string>
+    <string name="fail_NETWORK_FAILED">Das Gerät ist nicht in deinem Netz online gekommen.</string>
+    <string name="fail_HA_ERROR">Home Assistant hat einen Fehler gemeldet.</string>
+    <string name="tips_DEVICE_NOT_FOUND">• Versetze das Gerät in den Kopplungsmodus (oft: Taste 5–10 s halten)\n• Der Kopplungsmodus endet meist nach 15 Minuten, also Gerät aus- und wieder einschalten\n• War es schon einmal gekoppelt, setze es auf Werkseinstellungen zurück\n• Prüfe, ob der Code zu diesem Gerät gehört</string>
+    <string name="tips_OTHER_PROXY">• Schalte ESPHome-Bluetooth-Proxys in der Nähe des Geräts kurz ab\n• Oder deaktiviere Bluetooth am Home-Assistant-Host für einen Moment\n• Versuch es dann noch einmal mit dem Handy nah am Gerät</string>
+    <string name="tips_BLE_ERROR">• Geh näher an das Gerät heran\n• Schalte Bluetooth aus und wieder ein\n• Versuch es noch einmal</string>
+    <string name="tips_PASE_FAILED">• Prüfe den Code (scanne möglichst den QR-Code)\n• Vielleicht ist das Gerät schon mit einem anderen System gekoppelt: setze es auf Werkseinstellungen zurück</string>
+    <string name="tips_ATTESTATION_FAILED">• Test- oder Entwicklergeräte brauchen „enable_test_net_dcl“ in den Optionen der Matter-Server-App</string>
+    <string name="tips_NETWORK_FAILED">• Thread: Nötig ist ein bevorzugtes Thread-Netz mit einem Border Router, der online ist\n• WLAN: Das Gerät unterstützt nur 2,4-GHz-Netze\n• Prüfe die Liste auf dem vorigen Bildschirm</string>
+    <string name="tips_PROXY_UNAVAILABLE">• Öffne die Prüfliste und tippe neben „BLE-Proxy“ auf „Beheben“</string>
+    <string name="tips_generic">• Versuch es noch einmal\n• Teile die Diagnose, wenn das Problem bleibt</string>
+    <string name="fail_details">Details: %1$s</string>
+    <string name="fail_back_to_check">Zurück zur Prüfung</string>
+
+    <!-- Done -->
+    <string name="done_title">Gerät hinzugefügt</string>
+    <string name="done_subtitle">Es ist jetzt in Home Assistant verfügbar.</string>
+    <string name="done_name">Name</string>
+    <string name="done_area">Raum</string>
+    <string name="done_no_area">Kein Raum</string>
+    <string name="done_new_area">Neuer Raum…</string>
+    <string name="done_new_area_title">Neuer Raum</string>
+    <string name="done_device_pending">Home Assistant richtet das Gerät noch ein. Du kannst es später in Home Assistant benennen.</string>
+    <string name="done_seconds">Fertig in %1$d Sekunden</string>
+
+    <!-- Devices -->
+    <string name="devices_title">Matter-Geräte</string>
+    <string name="devices_share">Mit anderer App teilen</string>
+    <string name="devices_remove">Entfernen</string>
+    <string name="devices_remove_title">%1$s entfernen?</string>
+    <string name="devices_remove_body">Das Gerät wird aus Home Assistant entfernt. Um es wieder zu nutzen, musst du es eventuell zurücksetzen.</string>
+    <string name="share_title">%1$s teilen</string>
+    <string name="share_body">Scanne diesen Code innerhalb von 3 Minuten in der anderen App. Das Gerät bleibt in Home Assistant.</string>
+    <string name="share_manual">Kopplungscode</string>
+
+    <!-- Multi-admin -->
+    <string name="multiadmin_title">Aus anderer App übernehmen</string>
+    <string name="multiadmin_body">Wähle in der anderen App (z. B. einem Hub oder der Hersteller-App) „Teilen“ oder „Mit anderem Dienst verbinden“. Sie zeigt dir einen neuen Code. Scanne diesen Code hier oder gib ihn ein. Bluetooth ist dafür nicht nötig.</string>
+    <string name="multiadmin_progress">Wird über das Netzwerk hinzugefügt…</string>
+    <string name="multiadmin_success">Gerät hinzugefügt</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_server">Home Assistant</string>
+    <string name="settings_sign_out">Abmelden</string>
+    <string name="settings_show_details">Technische Details anzeigen</string>
+    <string name="settings_show_details_desc">Hersteller- und Produkt-IDs, Signalstärke, genaue Phasen</string>
+    <string name="settings_diagnostics">Diagnose</string>
+    <string name="settings_diagnostics_desc">App-Log und Matter-Server-Log, ohne Tokens und Codes</string>
+    <string name="settings_zigbee">Zigbee</string>
+    <string name="settings_zigbee_desc">Neue Zigbee-Geräte 4 Minuten lang beitreten lassen</string>
+    <string name="settings_zigbee_zha">Beitritt erlauben (ZHA)</string>
+    <string name="settings_zigbee_z2m">Beitritt erlauben (Zigbee2MQTT)</string>
+    <string name="settings_zigbee_started">Zigbee-Geräte können jetzt beitreten</string>
+    <string name="settings_about">Über</string>
+    <string name="settings_about_desc">Open Source unter GPL-3.0. Keine Telemetrie. Spricht nur mit deinem Home Assistant.</string>
+    <string name="settings_language">Sprache</string>
+
+    <!-- Notifications -->
+    <string name="notif_channel">Kopplung</string>
+    <string name="notif_title">Matter-Gerät wird hinzugefügt</string>
+</resources>

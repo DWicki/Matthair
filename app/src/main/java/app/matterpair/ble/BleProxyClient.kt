@@ -212,9 +212,12 @@ class BleProxyClient(
                     _events.emit(Event.PeripheralDisconnected(unexpected = false, gattStatus = null))
                     EMPTY
                 }
-                "discover_services" -> buildJsonObject {
-                    putJsonArray("services") {
-                        conn!!.gatt.discoverServices().forEach { u -> addJsonObject { put("uuid", MatterBle.toProtocolString(u)) } }
+                "discover_services" -> {
+                    val services = conn!!.gatt.discoverServices()
+                    buildJsonObject {
+                        putJsonArray("services") {
+                            services.forEach { u -> addJsonObject { put("uuid", MatterBle.toProtocolString(u)) } }
+                        }
                     }
                 }
                 "discover_characteristics" -> {
