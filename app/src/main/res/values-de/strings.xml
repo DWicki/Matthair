@@ -218,6 +218,10 @@
     <string name="device_ip">IP-Adresse</string>
     <string name="device_mac">MAC-Adresse</string>
     <string name="device_fabric_this">Dieses Home Assistant</string>
+    <string name="device_fabric_other">Auch verbunden mit</string>
+    <string name="fabric_remove_title">Von %1$s trennen?</string>
+    <string name="fabric_remove_body">%2$s ist dann nicht mehr über %1$s steuerbar. In Home Assistant bleibt es erhalten. Nutzt du das Gerät in der %1$s-App, verschwindet es dort.</string>
+    <string name="fabric_removed">System entfernt</string>
     <string name="device_model">Modell</string>
     <string name="device_firmware">Firmware</string>
     <string name="device_hardware">Hardware</string>

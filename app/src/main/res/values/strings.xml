@@ -220,6 +220,10 @@
     <string name="device_ip">IP address</string>
     <string name="device_mac">MAC address</string>
     <string name="device_fabric_this">This Home Assistant</string>
+    <string name="device_fabric_other">Also connected to</string>
+    <string name="fabric_remove_title">Disconnect from %1$s?</string>
+    <string name="fabric_remove_body">%2$s will no longer be controllable by %1$s. It stays in Home Assistant. If you use the device in the %1$s app, it disappears there.</string>
+    <string name="fabric_removed">Ecosystem removed</string>
     <string name="device_model">Model</string>
     <string name="device_firmware">Firmware</string>
     <string name="device_hardware">Hardware</string>

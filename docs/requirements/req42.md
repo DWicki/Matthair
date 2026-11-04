@@ -140,6 +140,7 @@ Thread secrets on the phone, controlling devices (on/off etc.), cloud features.
 | F-6.5 | Diagnostic bundle | App log + Matter Server log tail, tokens and codes redacted, shared via share sheet | ✅ |
 | F-6.6 | Device overview: status, network (Thread/Wi-Fi), device info, connected ecosystems | Data from device registry + `matter/node_diagnostics` | 🔬 |
 | F-6.7 | Rename device and change room from the app | `config/device_registry/update`; empty name restores the device's own name; new rooms created on save | 🔬 |
+| F-6.8 | Remove other ecosystems (fabrics) from a device, e.g. the Google/Android fabric left by GMS-based pairing | `matter/remove_matter_fabric`; HA's own fabric cannot be removed; confirmation required | 🔬 |
 
 ## 5. Quality requirements
 

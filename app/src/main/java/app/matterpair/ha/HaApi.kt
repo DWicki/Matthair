@@ -195,6 +195,18 @@ class HaApi(val ws: HaWebSocket, private val http: OkHttpClient, private val bas
         )
     }
 
+    /**
+     * Remove another ecosystem's fabric from a device (e.g. the "Android"/Google fabric left behind
+     * when a device was paired through Google Play Services). Never call this for HA's own fabric.
+     */
+    suspend fun removeFabric(deviceId: String, fabricIndex: Int) {
+        ws.call(
+            "matter/remove_matter_fabric",
+            mapOf("device_id" to JsonPrimitive(deviceId), "fabric_index" to JsonPrimitive(fabricIndex)),
+            60_000,
+        )
+    }
+
     suspend fun matterConfigEntryId(): String? = configEntries("matter").firstOrNull()?.str("entry_id")
 
     suspend fun configEntries(domain: String): List<JsonObject> =

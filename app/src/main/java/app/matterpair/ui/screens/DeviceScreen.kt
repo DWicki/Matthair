@@ -31,6 +31,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Hub
 import androidx.compose.material.icons.rounded.Lan
+import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.MeetingRoom
 import androidx.compose.material.icons.rounded.Numbers
@@ -78,6 +79,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import app.matterpair.R
+import app.matterpair.ha.FabricInfo
 import app.matterpair.ha.HaArea
 import app.matterpair.ha.HaDevice
 import app.matterpair.matter.SetupPayloadParser
@@ -111,6 +113,7 @@ fun DeviceScreen(vm: MainViewModel, deviceId: String, onBack: () -> Unit) {
     var edit by remember { mutableStateOf(false) }
     var remove by remember { mutableStateOf(false) }
     var shared by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var removeFabric by remember { mutableStateOf<FabricInfo?>(null) }
     LaunchedEffect(deviceId) { vm.loadDetail(deviceId) }
 
     Scaffold(
@@ -233,14 +236,10 @@ fun DeviceScreen(vm: MainViewModel, deviceId: String, onBack: () -> Unit) {
             if (diag != null && diag.fabrics.isNotEmpty()) {
                 item {
                     Section(stringResource(R.string.device_section_ecosystems)) {
-                        Rows(diag.fabrics.map { f ->
-                            val own = f.fabricIndex == diag.ownFabricIndex
-                            Triple(
-                                Icons.Rounded.Workspaces,
-                                if (own) stringResource(R.string.device_fabric_this) else (f.label ?: f.vendorId.hex()),
-                                f.vendorName ?: f.label ?: f.vendorId.hex(),
-                            )
-                        })
+                        diag.fabrics.forEachIndexed { i, f ->
+                            if (i > 0) HorizontalDivider(Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            FabricRow(f, own = f.fabricIndex == diag.ownFabricIndex) { removeFabric = f }
+                        }
                     }
                 }
             }
@@ -290,6 +289,38 @@ fun DeviceScreen(vm: MainViewModel, deviceId: String, onBack: () -> Unit) {
             )
         }
         shared?.let { (manual, qr) -> ShareSheet(d, manual, qr) { shared = null } }
+        removeFabric?.let { f ->
+            val who = f.vendorName ?: f.label ?: f.vendorId.hex()
+            AlertDialog(
+                onDismissRequest = { removeFabric = null },
+                icon = { Icon(Icons.Rounded.LinkOff, null) },
+                title = { Text(stringResource(R.string.fabric_remove_title, who)) },
+                text = { Text(stringResource(R.string.fabric_remove_body, who, d.displayName)) },
+                confirmButton = { TextButton({ vm.removeFabric(d, f); removeFabric = null }) { Text(stringResource(R.string.action_remove)) } },
+                dismissButton = { TextButton({ removeFabric = null }) { Text(stringResource(R.string.action_cancel)) } },
+            )
+        }
+    }
+}
+
+/** One ecosystem a device belongs to; foreign ones can be removed. */
+@Composable
+private fun FabricRow(f: FabricInfo, own: Boolean, onRemove: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Rounded.Workspaces, null, Modifier.size(22.dp), tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.width(18.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                if (own) stringResource(R.string.device_fabric_this) else stringResource(R.string.device_fabric_other),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(f.vendorName ?: f.label ?: f.vendorId.hex(), style = MaterialTheme.typography.bodyLarge)
+            if (!own && !f.label.isNullOrBlank() && f.label != f.vendorName) {
+                Text(f.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if (!own) TextButton(onRemove) { Text(stringResource(R.string.action_remove), color = LocalStatusColors.current.fail) }
     }
 }
 

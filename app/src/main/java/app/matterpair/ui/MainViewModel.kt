@@ -291,6 +291,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             .fold({ DeviceDetail(it, null) }, { DeviceDetail(null, it.message) })
     }
 
+    /** Remove a foreign ecosystem (fabric) from a device; refuses HA's own fabric. */
+    fun removeFabric(device: HaDevice, fabric: app.matterpair.ha.FabricInfo) = viewModelScope.launch {
+        val own = _detail.value?.diagnostics?.ownFabricIndex
+        if (own == null || fabric.fabricIndex == own) return@launch
+        _busy.value = true
+        runCatching { c.connector.session().api.removeFabric(device.id, fabric.fabricIndex) }
+            .onSuccess {
+                AppLog.i("ViewModel", "Removed fabric ${fabric.fabricIndex} (${fabric.vendorName}) from ${device.id}")
+                _result.value = UiResult.Message(app.matterpair.R.string.fabric_removed)
+            }
+            .onFailure { _result.value = UiResult.Error(it.message ?: "?") }
+        _busy.value = false
+        loadDetail(device.id)
+    }
+
     /** URL of the device page in the HA web UI. */
     fun haDeviceUrl(deviceId: String): String? = c.config.config.value?.localUrl?.let { "$it/config/devices/device/$deviceId" }
 
