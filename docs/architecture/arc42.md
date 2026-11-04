@@ -73,7 +73,7 @@ See [req42 §2](../requirements/req42.md#2-stakeholders).
 ### 5.1 Level 1
 
 ```
-app.matterpair
+io.github.dwicki.hamatterpair
 ├── ui/            Compose screens, MainViewModel, theme, labels (string mapping)
 ├── commission/    CommissioningSession (orchestrator), EnvironmentCheck, CommissioningService
 ├── ble/           BleScanner, GattConnection, BleProxyClient (proxy protocol v1)

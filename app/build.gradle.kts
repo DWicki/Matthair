@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "app.matterpair"
+    namespace = "io.github.dwicki.hamatterpair"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "app.matterpair"
+        applicationId = "io.github.dwicki.hamatterpair"
         minSdk = 31
         targetSdk = 35
         versionCode = 1
