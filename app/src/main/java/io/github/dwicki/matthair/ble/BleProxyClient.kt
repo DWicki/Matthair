@@ -20,6 +20,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -100,9 +101,7 @@ class BleProxyClient(
         val worker = scope.launch { for (op in queue) runCatching { op() } }
     }
 
-    // ------------------------------------------------------------------------------------------
-    // Socket lifecycle
-    // ------------------------------------------------------------------------------------------
+    // --- Socket lifecycle ----------------------------------------------------------------------------
 
     /** Open the `/ble` WebSocket (through HA ingress) and perform the `hello` handshake. */
     suspend fun connect(request: Request) {
@@ -180,9 +179,7 @@ class BleProxyClient(
         runBlocking { all.forEach { runCatching { it.gatt.disconnect() }; it.queue.close() } }
     }
 
-    // ------------------------------------------------------------------------------------------
-    // Command dispatch
-    // ------------------------------------------------------------------------------------------
+    // --- Command dispatch ----------------------------------------------------------------------------
 
     private fun dispatch(id: Int, command: String, args: JsonObject) {
         AppLog.d(TAG, "← $command #$id")
@@ -201,83 +198,22 @@ class BleProxyClient(
 
     private suspend fun execute(id: Int, command: String, args: JsonObject, conn: ProxyConnection?) {
         try {
-            val result: JsonObject = when (command) {
-                "start_scan" -> { startServerScan(); EMPTY }
-                "stop_scan" -> { stopServerScan(); EMPTY }
+            val result = when (command) {
+                "start_scan" -> EMPTY.also { startServerScan() }
+                "stop_scan" -> EMPTY.also { stopServerScan() }
                 "connect" -> connectPeripheral(args)
-                "disconnect" -> {
-                    connections.remove(conn!!.handle)
-                    conn.gatt.disconnect()
-                    conn.queue.close()
-                    _events.emit(Event.PeripheralDisconnected(unexpected = false, gattStatus = null))
-                    EMPTY
-                }
-                "discover_services" -> {
-                    val services = conn!!.gatt.discoverServices()
-                    buildJsonObject {
-                        putJsonArray("services") {
-                            services.forEach { u -> addJsonObject { put("uuid", MatterBle.toProtocolString(u)) } }
-                        }
-                    }
-                }
-                "discover_characteristics" -> {
-                    val service = MatterBle.parseUuid(args.string("service_uuid"))
-                    buildJsonObject {
-                        putJsonArray("characteristics") {
-                            conn!!.gatt.characteristicsOf(service).forEach { c ->
-                                addJsonObject {
-                                    put("uuid", MatterBle.toProtocolString(c.uuid))
-                                    put("properties", JsonArray(propertiesOf(c.properties).map { JsonPrimitive(it) }))
-                                }
-                            }
-                        }
-                    }
-                }
-                "read_characteristic" -> {
-                    val value = conn!!.gatt.read(MatterBle.parseUuid(args.string("characteristic_uuid")))
-                    buildJsonObject { put("value", b64(value)) }
-                }
-                "write_characteristic" -> {
-                    val uuid = MatterBle.parseUuid(args.string("characteristic_uuid"))
-                    val value = unb64(args.string("value"))
-                    conn!!.writeChar = uuid
-                    if (uuid == MatterBle.C1_UUID) btp.onFrame(BtpObserver.Direction.TO_DEVICE, value)
-                    conn.gatt.write(uuid, value, args.boolean("response") ?: false)
-                    EMPTY
-                }
-                "subscribe_characteristic" -> {
-                    val uuid = MatterBle.parseUuid(args.string("characteristic_uuid"))
-                    conn!!.notifyChar = uuid
-                    conn.gatt.subscribe(uuid, true)
-                    EMPTY
-                }
+                "disconnect" -> disconnectPeripheral(conn.required())
+                "discover_services" -> discoverServices(conn.required())
+                "discover_characteristics" -> discoverCharacteristics(conn.required(), args)
+                "read_characteristic" -> readCharacteristic(conn.required(), args)
+                "write_characteristic" -> writeCharacteristic(conn.required(), args)
+                "subscribe_characteristic" -> subscribeCharacteristic(conn.required(), args)
+                "unsubscribe_characteristic" -> unsubscribeCharacteristic(conn.required(), args)
+                "request_mtu" -> buildJsonObject { put("mtu", conn.required().gatt.requestMtu(args.int("mtu"))) }
                 "write_and_subscribe" -> {
-                    val writeUuid = MatterBle.parseUuid(args.string("write_uuid"))
-                    val subUuid = MatterBle.parseUuid(args.string("subscribe_uuid"))
-                    val value = unb64(args.string("write_value"))
-                    conn!!.writeChar = writeUuid
-                    conn.notifyChar = subUuid
-                    conn.holdNotifications = true
-                    if (writeUuid == MatterBle.C1_UUID) btp.onFrame(BtpObserver.Direction.TO_DEVICE, value)
-                    try {
-                        conn.gatt.writeAndSubscribe(writeUuid, value, args.boolean("write_response") ?: false, subUuid)
-                    } catch (e: Exception) {
-                        conn.holdNotifications = false
-                        throw e
-                    }
-                    // Respond first, then flush indications that raced ahead (see protocol doc).
-                    respondOk(id, EMPTY)
-                    flushHeld(conn)
-                    return
+                    writeAndSubscribe(id, conn.required(), args)
+                    return // responds itself, see there
                 }
-                "unsubscribe_characteristic" -> {
-                    val uuid = MatterBle.parseUuid(args.string("characteristic_uuid"))
-                    if (conn!!.notifyChar != uuid) throw BleException("not_subscribed", "Not subscribed to $uuid")
-                    conn.gatt.subscribe(uuid, false)
-                    conn.notifyChar = null
-                    EMPTY
-                }
-                "request_mtu" -> buildJsonObject { put("mtu", conn!!.gatt.requestMtu(args.int("mtu"))) }
                 else -> throw BleException("internal_error", "Unknown command $command")
             }
             respondOk(id, result)
@@ -288,9 +224,91 @@ class BleProxyClient(
         }
     }
 
-    // ------------------------------------------------------------------------------------------
-    // Scanning
-    // ------------------------------------------------------------------------------------------
+    /** Commands with a `connection_handle` always get a connection from [dispatch]. */
+    private fun ProxyConnection?.required(): ProxyConnection = this ?: throw BleException("not_connected", "No connection")
+
+    private suspend fun disconnectPeripheral(conn: ProxyConnection): JsonObject {
+        connections.remove(conn.handle)
+        conn.gatt.disconnect()
+        conn.queue.close()
+        _events.emit(Event.PeripheralDisconnected(unexpected = false, gattStatus = null))
+        return EMPTY
+    }
+
+    private suspend fun discoverServices(conn: ProxyConnection): JsonObject {
+        val services = conn.gatt.discoverServices()
+        return buildJsonObject {
+            putJsonArray("services") { services.forEach { addJsonObject { put("uuid", MatterBle.toProtocolString(it)) } } }
+        }
+    }
+
+    private fun discoverCharacteristics(conn: ProxyConnection, args: JsonObject): JsonObject {
+        val service = MatterBle.parseUuid(args.string("service_uuid"))
+        return buildJsonObject {
+            putJsonArray("characteristics") {
+                conn.gatt.characteristicsOf(service).forEach { characteristic ->
+                    addJsonObject {
+                        put("uuid", MatterBle.toProtocolString(characteristic.uuid))
+                        put("properties", JsonArray(propertiesOf(characteristic.properties).map(::JsonPrimitive)))
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun readCharacteristic(conn: ProxyConnection, args: JsonObject): JsonObject {
+        val value = conn.gatt.read(MatterBle.parseUuid(args.string("characteristic_uuid")))
+        return buildJsonObject { put("value", b64(value)) }
+    }
+
+    private suspend fun writeCharacteristic(conn: ProxyConnection, args: JsonObject): JsonObject {
+        val uuid = MatterBle.parseUuid(args.string("characteristic_uuid"))
+        val value = unb64(args.string("value"))
+        conn.writeChar = uuid
+        if (uuid == MatterBle.C1_UUID) btp.onFrame(BtpObserver.Direction.TO_DEVICE, value)
+        conn.gatt.write(uuid, value, args.boolean("response") ?: false)
+        return EMPTY
+    }
+
+    private suspend fun subscribeCharacteristic(conn: ProxyConnection, args: JsonObject): JsonObject {
+        val uuid = MatterBle.parseUuid(args.string("characteristic_uuid"))
+        conn.notifyChar = uuid
+        conn.gatt.subscribe(uuid, true)
+        return EMPTY
+    }
+
+    private suspend fun unsubscribeCharacteristic(conn: ProxyConnection, args: JsonObject): JsonObject {
+        val uuid = MatterBle.parseUuid(args.string("characteristic_uuid"))
+        if (conn.notifyChar != uuid) throw BleException("not_subscribed", "Not subscribed to $uuid")
+        conn.gatt.subscribe(uuid, false)
+        conn.notifyChar = null
+        return EMPTY
+    }
+
+    /**
+     * Writes the BTP handshake request and subscribes to C2 in one step. The device answers
+     * with an indication right away, and the server must see our response before that
+     * indication, so notifications are held back until the response is sent.
+     */
+    private suspend fun writeAndSubscribe(id: Int, conn: ProxyConnection, args: JsonObject) {
+        val writeUuid = MatterBle.parseUuid(args.string("write_uuid"))
+        val subscribeUuid = MatterBle.parseUuid(args.string("subscribe_uuid"))
+        val value = unb64(args.string("write_value"))
+        conn.writeChar = writeUuid
+        conn.notifyChar = subscribeUuid
+        conn.holdNotifications = true
+        if (writeUuid == MatterBle.C1_UUID) btp.onFrame(BtpObserver.Direction.TO_DEVICE, value)
+        try {
+            conn.gatt.writeAndSubscribe(writeUuid, value, args.boolean("write_response") ?: false, subscribeUuid)
+        } catch (e: Exception) {
+            conn.holdNotifications = false
+            throw e
+        }
+        respondOk(id, EMPTY)
+        flushHeld(conn)
+    }
+
+    // --- Scanning ------------------------------------------------------------------------------------
 
     private fun startServerScan() {
         if (!scanner.isBluetoothOn) throw BleException("bluetooth_unavailable", "Bluetooth is off")
@@ -323,9 +341,7 @@ class BleProxyClient(
         _events.tryEmit(Event.ServerScanning(false))
     }
 
-    // ------------------------------------------------------------------------------------------
-    // Connections
-    // ------------------------------------------------------------------------------------------
+    // --- Connections ---------------------------------------------------------------------------------
 
     private suspend fun connectPeripheral(args: JsonObject): JsonObject {
         val address = args.string("address").uppercase()
@@ -392,9 +408,7 @@ class BleProxyClient(
         scope.launch { conn.gatt.disconnect(); conn.queue.close() }
     }
 
-    // ------------------------------------------------------------------------------------------
-    // Wire helpers
-    // ------------------------------------------------------------------------------------------
+    // --- Wire helpers --------------------------------------------------------------------------------
 
     private fun respondOk(id: Int, result: JsonObject) {
         ws?.send(buildJsonObject { put("id", id); put("success", true); put("result", result) }.toString())
@@ -408,7 +422,7 @@ class BleProxyClient(
         }.toString())
     }
 
-    private fun sendEvent(name: String, data: kotlinx.serialization.json.JsonObjectBuilder.() -> Unit) {
+    private fun sendEvent(name: String, data: JsonObjectBuilder.() -> Unit) {
         ws?.send(buildJsonObject { put("event", name); putJsonObject("data", data) }.toString())
     }
 
