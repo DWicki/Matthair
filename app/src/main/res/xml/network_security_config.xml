@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Home Assistant is frequently reached over plain HTTP on the LAN (http://homeassistant.local:8123)
+  or over HTTPS with a self-signed certificate / private CA. We therefore:
+   * allow cleartext (the UI warns whenever a non-TLS URL is used), and
+   * trust user-installed CAs in addition to the system store.
+  Additional per-server trust (pinned self-signed certificates) is handled in code, see
+  app.matterpair.ha.HttpClients.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

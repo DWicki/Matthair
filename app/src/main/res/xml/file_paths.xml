@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Diagnostic bundles are written here before being shared. -->
+    <cache-path name="diagnostics" path="diagnostics/" />
+</paths>
