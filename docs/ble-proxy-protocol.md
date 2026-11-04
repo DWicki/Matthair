@@ -7,9 +7,9 @@ upstream specification
 protocol version 1.0). If anything here contradicts upstream, **upstream wins**. Please open an
 issue in that case.
 
-Implementation: [`BleProxyClient.kt`](../app/src/main/java/io/github/dwicki/hamatterpair/ble/BleProxyClient.kt),
-[`GattConnection.kt`](../app/src/main/java/io/github/dwicki/hamatterpair/ble/GattConnection.kt),
-[`BleScanner.kt`](../app/src/main/java/io/github/dwicki/hamatterpair/ble/BleScanner.kt).
+Implementation: [`BleProxyClient.kt`](../app/src/main/java/io/github/dwicki/matthair/ble/BleProxyClient.kt),
+[`GattConnection.kt`](../app/src/main/java/io/github/dwicki/matthair/ble/GattConnection.kt),
+[`BleScanner.kt`](../app/src/main/java/io/github/dwicki/matthair/ble/BleScanner.kt).
 
 ---
 

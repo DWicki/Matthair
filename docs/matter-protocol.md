@@ -14,8 +14,8 @@ below have not changed across these versions.
 
 ## 1. Onboarding payload (setup code)
 
-Code: [`SetupPayloadParser.kt`](../app/src/main/java/io/github/dwicki/hamatterpair/matter/SetupPayloadParser.kt),
-tests: [`SetupPayloadParserTest.kt`](../app/src/test/java/io/github/dwicki/hamatterpair/matter/SetupPayloadParserTest.kt).
+Code: [`SetupPayloadParser.kt`](../app/src/main/java/io/github/dwicki/matthair/matter/SetupPayloadParser.kt),
+tests: [`SetupPayloadParserTest.kt`](../app/src/test/java/io/github/dwicki/matthair/matter/SetupPayloadParserTest.kt).
 
 ### 1.1 Fields
 
@@ -88,7 +88,7 @@ drive it). The app reads `MT:` strings from NDEF text or URI records.
 
 ## 2. BLE advertisement
 
-Code: [`MatterBle.kt`](../app/src/main/java/io/github/dwicki/hamatterpair/matter/MatterBle.kt).
+Code: [`MatterBle.kt`](../app/src/main/java/io/github/dwicki/matthair/matter/MatterBle.kt).
 
 A device in commissioning mode advertises **service data** for UUID `0xFFF6`:
 
@@ -109,7 +109,7 @@ Thread.
 
 ## 3. BTP, the BLE Transport Protocol
 
-Code: [`BtpObserver.kt`](../app/src/main/java/io/github/dwicki/hamatterpair/matter/BtpObserver.kt).
+Code: [`BtpObserver.kt`](../app/src/main/java/io/github/dwicki/matthair/matter/BtpObserver.kt).
 
 BTP carries Matter messages over GATT: client→device via writes to **C1**, device→client via
 **indications on C2**. The proxy relays BTP frames byte-for-byte. Matthair only *reads*

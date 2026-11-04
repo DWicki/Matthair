@@ -5,7 +5,7 @@
    * allow cleartext (the UI warns whenever a non-TLS URL is used), and
    * trust user-installed CAs in addition to the system store.
   Additional per-server trust (pinned self-signed certificates) is handled in code, see
-  io.github.dwicki.hamatterpair.ha.HttpClients.
+  io.github.dwicki.matthair.ha.HttpClients.
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="true">
