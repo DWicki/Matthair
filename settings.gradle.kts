@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MatterPair"
+rootProject.name = "Matthair"
 include(":app")

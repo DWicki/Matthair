@@ -12,7 +12,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
-import io.github.dwicki.hamatterpair.MatterPairApp
+import io.github.dwicki.hamatterpair.MatthairApp
 import io.github.dwicki.hamatterpair.R
 import io.github.dwicki.hamatterpair.ui.MainActivity
 import io.github.dwicki.hamatterpair.ui.phaseLabel
@@ -36,7 +36,7 @@ class CommissioningService : LifecycleService() {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE,
         )
         lifecycleScope.launch {
-            (application as MatterPairApp).container.session.state.collect { s ->
+            (application as MatthairApp).container.session.state.collect { s ->
                 if (s.running) {
                     getSystemService(NotificationManager::class.java)
                         .notify(NOTIFICATION_ID, build(getString(phaseLabel(s.phase))))

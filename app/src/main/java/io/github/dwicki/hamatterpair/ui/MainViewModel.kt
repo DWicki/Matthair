@@ -3,7 +3,7 @@ package io.github.dwicki.hamatterpair.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.dwicki.hamatterpair.MatterPairApp
+import io.github.dwicki.hamatterpair.MatthairApp
 import io.github.dwicki.hamatterpair.data.AuthMethod
 import io.github.dwicki.hamatterpair.data.ServerConfig
 import io.github.dwicki.hamatterpair.ha.HaArea
@@ -50,7 +50,7 @@ sealed interface UiResult {
  * and holds wizard state such as the scanned payload.
  */
 class MainViewModel(app: Application) : AndroidViewModel(app) {
-    private val c = (app as MatterPairApp).container
+    private val c = (app as MatthairApp).container
 
     val config: StateFlow<ServerConfig?> = c.config.config
     val session = c.session.state

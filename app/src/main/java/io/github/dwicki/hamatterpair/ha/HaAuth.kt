@@ -99,8 +99,8 @@ class HaAuth(private val config: ConfigRepository) {
         private const val TAG = "HaAuth"
 
         /** Loopback client id: accepted by HA without fetching (same-host redirect). */
-        const val CLIENT_ID = "http://127.0.0.1/matterpair/"
-        const val REDIRECT_URI = "http://127.0.0.1/matterpair/callback"
+        const val CLIENT_ID = "http://127.0.0.1/matthair/"
+        const val REDIRECT_URI = "http://127.0.0.1/matthair/callback"
 
         fun authorizeUrl(baseUrl: String, state: String): String =
             (baseUrl.trimEnd('/') + "/auth/authorize").toHttpUrl().newBuilder()

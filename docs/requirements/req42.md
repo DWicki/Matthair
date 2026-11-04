@@ -1,4 +1,4 @@
-# MatterPair: Requirements (req42)
+# Matthair: Requirements (req42)
 
 Structure follows the [req42](https://req42.de) framework. Requirement IDs (`F-…`, `Q-…`, `C-…`)
 are stable and are referenced from the [architecture (arc42)](../architecture/arc42.md), from
@@ -27,7 +27,7 @@ with or without microG) can add Matter devices, Wi-Fi and Thread alike, as easil
 Services. Its "minimal" (FOSS) flavour cannot add Matter devices at all, and with microG users
 report a demanded GMS update. Since version 9 the Matter Server app (matter.js based) offers a
 BLE proxy endpoint, so any client can lend its Bluetooth radio to the server's commissioner.
-MatterPair is that client for Android.
+Matthair is that client for Android.
 
 ## 2. Stakeholders
 
@@ -50,7 +50,7 @@ Thread secrets on the phone, controlling devices (on/off etc.), cloud features.
 
 ```
  ┌──────────┐  BLE (GATT 0xFFF6)  ┌──────────────┐  HTTPS/WSS (HA auth)   ┌─────────────────────┐
- │ Matter   │◄───────────────────►│  MatterPair  │◄──────────────────────►│ Home Assistant       │
+ │ Matter   │◄───────────────────►│  Matthair  │◄──────────────────────►│ Home Assistant       │
  │ device   │                     │  (Android)   │   ingress → /ble, /ws  │  ├ Matter integration│
  └──────────┘                     └──────────────┘                        │  ├ Supervisor/ingress│
       ▲                                                                   │  └ Matter Server app │

@@ -62,7 +62,7 @@ class SecureStore(context: Context) {
 
     private companion object {
         const val KEYSTORE = "AndroidKeyStore"
-        const val ALIAS = "matterpair_secrets"
+        const val ALIAS = "matthair_secrets"
         const val TRANSFORMATION = "AES/GCM/NoPadding"
     }
 }

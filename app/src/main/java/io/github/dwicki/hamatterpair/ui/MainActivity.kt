@@ -51,7 +51,7 @@ import io.github.dwicki.hamatterpair.ui.screens.ServerScreen
 import io.github.dwicki.hamatterpair.ui.screens.SettingsScreen
 import io.github.dwicki.hamatterpair.ui.screens.WelcomeScreen
 import io.github.dwicki.hamatterpair.ui.screens.WifiScreen
-import io.github.dwicki.hamatterpair.ui.theme.MatterPairTheme
+import io.github.dwicki.hamatterpair.ui.theme.MatthairTheme
 import io.github.dwicki.hamatterpair.util.Diagnostics
 
 /** Navigation routes. The add-device wizard is `scan → check → pairing → done`. */
@@ -83,7 +83,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MatterPairTheme {
+            MatthairTheme {
                 Surface(color = MaterialTheme.colorScheme.background) { App() }
             }
         }

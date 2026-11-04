@@ -1,4 +1,4 @@
-# MatterPair
+# Matthair
 
 **Add Matter devices (Wi-Fi and Thread) to Home Assistant from a de-Googled Android phone.**
 No Google Play Services, no microG required, no cloud.
@@ -9,7 +9,7 @@ commissions the device, and the fabric, certificates, Wi-Fi password and Thread 
 leave your HA host.
 
 ```
- Matter device ──BLE──► Phone (MatterPair) ──HA ingress (authenticated)──► Matter Server ◄── Home Assistant
+ Matter device ──BLE──► Phone (Matthair) ──HA ingress (authenticated)──► Matter Server ◄── Home Assistant
 ```
 
 > **Status: 0.1.0, untested on hardware.** The app builds and the unit tests pass, but it has
@@ -45,8 +45,8 @@ leave your HA host.
 ## Getting started
 
 1. In Home Assistant open **Settings → Apps → Matter Server → Configuration**, enable
-   `ble_proxy` and restart the app. (MatterPair can also do this for you from its check list.)
-2. Install MatterPair and enter your HA address, e.g. `http://homeassistant.local:8123`.
+   `ble_proxy` and restart the app. (Matthair can also do this for you from its check list.)
+2. Install Matthair and enter your HA address, e.g. `http://homeassistant.local:8123`.
 3. Sign in with your HA account (or paste a long-lived access token).
 4. Tap **Add device**, scan the code and follow the steps.
 
@@ -81,7 +81,7 @@ offers to store it if missing.
 
 ## Privacy
 
-MatterPair connects **only** to the Home Assistant addresses you enter. It has no analytics, no
+Matthair connects **only** to the Home Assistant addresses you enter. It has no analytics, no
 crash reporting and no update checks. Tokens are encrypted with a key in the Android Keystore
 and excluded from backups. Setup codes are kept in memory only and removed from all logs.
 

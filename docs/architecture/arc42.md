@@ -1,4 +1,4 @@
-# MatterPair: Architecture (arc42)
+# Matthair: Architecture (arc42)
 
 Template: [arc42](https://arc42.org), version 8. Requirements are referenced by their IDs from
 [req42](../requirements/req42.md).
@@ -7,7 +7,7 @@ Template: [arc42](https://arc42.org), version 8. Requirements are referenced by 
 
 ## 1. Introduction and goals
 
-MatterPair lets Home Assistant commission Matter devices **through the phone's Bluetooth**,
+Matthair lets Home Assistant commission Matter devices **through the phone's Bluetooth**,
 without Google Play Services. The phone is a pure **BLE proxy client** of the Matter Server.
 Fabric, certificates, Wi-Fi credentials and the Thread dataset stay on the HA host. The phone
 has no fabric and no Matter SDK.
@@ -39,7 +39,7 @@ See [req42 §2](../requirements/req42.md#2-stakeholders).
 
 ### 3.1 Business context
 
-| Partner | Input to MatterPair | Output from MatterPair |
+| Partner | Input to Matthair | Output from Matthair |
 |---------|---------------------|------------------------|
 | User | Setup code (QR/manual/NFC/photo), names, rooms, confirmations | Progress, errors with fixes, device list |
 | Matter device | BLE advertisements, GATT indications (BTP) | GATT writes (BTP), relayed byte-for-byte |
@@ -165,7 +165,7 @@ device's fail-safe can expire and revert. That is why no factory reset is needed
 ```
 Android phone (API 31+)             HA host (HA OS / Supervised)
 ┌────────────────────────┐         ┌───────────────────────────────────────────┐
-│ MatterPair APK          │  LAN /  │ Home Assistant Core :8123                 │
+│ Matthair APK          │  LAN /  │ Home Assistant Core :8123                 │
 │  ├ Activity (Compose)   │◄──WAN──►│  ├ /api/websocket                         │
 │  ├ FGS connectedDevice  │         │  ├ /api/hassio_ingress/<t>/ → app :5580   │
 │  └ Keystore key         │         │ Supervisor                                │
@@ -188,7 +188,7 @@ Distribution: F-Droid (reproducible build) and plain APK. No Play Store dependen
 ### 8.2 Security concept
 
 * **Authentication:** OAuth2 against HA with a loopback `client_id`
-  (`http://127.0.0.1/matterpair/`). HA accepts a redirect URI on the same host as the client id
+  (`http://127.0.0.1/matthair/`). HA accepts a redirect URI on the same host as the client id
   without fetching anything. The WebView intercepts the redirect, so nothing ever listens on
   the loopback address. Alternative: a long-lived token.
 * **Secret storage:** tokens are encrypted with AES-256-GCM under an Android Keystore key and

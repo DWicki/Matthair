@@ -11,7 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
-class MatterPairApp : Application() {
+class MatthairApp : Application() {
     lateinit var container: AppContainer
         private set
 

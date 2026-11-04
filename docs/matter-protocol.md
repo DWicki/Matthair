@@ -1,6 +1,6 @@
-# Matter protocol, the parts MatterPair touches
+# Matter protocol, the parts Matthair touches
 
-MatterPair is **not** a Matter controller. It parses setup codes, recognises Matter BLE
+Matthair is **not** a Matter controller. It parses setup codes, recognises Matter BLE
 advertisements and passively observes BTP traffic to show progress. Everything else (PASE,
 attestation, certificates, network provisioning, CASE) is done by the Matter Server. This page
 documents exactly those parts of the Matter Core Specification the app depends on, with
@@ -14,8 +14,8 @@ below have not changed across these versions.
 
 ## 1. Onboarding payload (setup code)
 
-Code: [`SetupPayloadParser.kt`](../app/src/main/java/app/matterpair/matter/SetupPayloadParser.kt),
-tests: [`SetupPayloadParserTest.kt`](../app/src/test/java/app/matterpair/matter/SetupPayloadParserTest.kt).
+Code: [`SetupPayloadParser.kt`](../app/src/main/java/io/github/dwicki/hamatterpair/matter/SetupPayloadParser.kt),
+tests: [`SetupPayloadParserTest.kt`](../app/src/test/java/io/github/dwicki/hamatterpair/matter/SetupPayloadParserTest.kt).
 
 ### 1.1 Fields
 
@@ -38,7 +38,7 @@ tests: [`SetupPayloadParserTest.kt`](../app/src/test/java/app/matterpair/matter/
 * Every 3 bytes become 5 characters (`value = b0 + b1·256 + b2·65536`, emitted LSB-first in base 38).
   A trailing 2 bytes become 4 characters, and 1 byte becomes 2.
 * Optional TLV data (serial number etc.) may follow the 11 fixed bytes. It is ignored.
-* Several payloads may be concatenated with `*`. MatterPair uses the first.
+* Several payloads may be concatenated with `*`. Matthair uses the first.
 
 Example (Matter SDK default test device): `MT:Y.K9042C00KA0648G00` decodes to VID `0xFFF1`,
 PID `0x8000`, flow standard, capabilities BLE, discriminator 3840, passcode 20202021.
@@ -58,7 +58,7 @@ Example: `3497-011-2332` decodes to short discriminator 15 and passcode 20202021
 
 > **Only the upper 4 bits of the discriminator** ("short discriminator") are in the manual code.
 > With a manual code, up to 256 different full discriminators match, so several nearby
-> devices in pairing mode can be ambiguous. MatterPair warns when more than one matches.
+> devices in pairing mode can be ambiguous. Matthair warns when more than one matches.
 
 Separators (`-`, spaces, dots) are ignored on input. The first digit must be ≤ 7 (8 and 9 are
 reserved).
@@ -68,12 +68,12 @@ reserved).
 Valid range 1 … 99 999 998. Forbidden because they are trivial: `00000000`, `11111111`,
 `22222222`, … `99999999`, `12345678`, `87654321`. The parser rejects them.
 
-The passcode is the PASE secret. MatterPair keeps it only in memory, masks it in the UI
+The passcode is the PASE secret. Matthair keeps it only in memory, masks it in the UI
 (`••••2021`), scrubs it from logs, and forgets it after the wizard ends.
 
 ### 1.5 Commissioning flows
 
-| Flow | What the user must do | MatterPair behaviour |
+| Flow | What the user must do | Matthair behaviour |
 |------|-----------------------|----------------------|
 | Standard | Nothing. An uncommissioned device advertises after power-up | Normal path |
 | User intent | Press a button or similar to start advertising | Shows a hint |
@@ -83,12 +83,12 @@ The passcode is the PASE secret. MatterPair keeps it only in memory, masks it in
 
 Since Matter 1.4.1 onboarding data can be stored on an NFC tag (an NDEF record containing the
 `MT:` payload). Commissioning itself still runs over BLE. Matter 1.6 adds NFC as a full
-commissioning transport, which MatterPair does not implement (the Matter Server would have to
+commissioning transport, which Matthair does not implement (the Matter Server would have to
 drive it). The app reads `MT:` strings from NDEF text or URI records.
 
 ## 2. BLE advertisement
 
-Code: [`MatterBle.kt`](../app/src/main/java/app/matterpair/matter/MatterBle.kt).
+Code: [`MatterBle.kt`](../app/src/main/java/io/github/dwicki/hamatterpair/matter/MatterBle.kt).
 
 A device in commissioning mode advertises **service data** for UUID `0xFFF6`:
 
@@ -109,10 +109,10 @@ Thread.
 
 ## 3. BTP, the BLE Transport Protocol
 
-Code: [`BtpObserver.kt`](../app/src/main/java/app/matterpair/matter/BtpObserver.kt).
+Code: [`BtpObserver.kt`](../app/src/main/java/io/github/dwicki/hamatterpair/matter/BtpObserver.kt).
 
 BTP carries Matter messages over GATT: client→device via writes to **C1**, device→client via
-**indications on C2**. The proxy relays BTP frames byte-for-byte. MatterPair only *reads*
+**indications on C2**. The proxy relays BTP frames byte-for-byte. Matthair only *reads*
 them to derive progress.
 
 ### 3.1 Handshake
@@ -180,7 +180,7 @@ the device was in fact commissioned.
 2. **PASE**: SPAKE2+ with the passcode, via PBKDF parameters and Pake1/2/3. Result: encrypted session.
 3. **Arm fail-safe**: the device rolls everything back if commissioning does not finish in time
    (typically 60 s, extendable). That rollback is why a cancelled attempt does not require a
-   factory reset. MatterPair waits for the server-side attempt to end before retrying.
+   factory reset. Matthair waits for the server-side attempt to end before retrying.
 4. **Device attestation**: read the DAC and PAI certificates and the attestation response, then
    verify the chain up to a PAA root (production DCL, or the test DCL with `enable_test_net_dcl`).
 5. **CSR → NOC**: the device generates an operational key, the commissioner installs root
@@ -196,9 +196,9 @@ A commissioned device can join further fabrics:
 
 * **Open commissioning window** (enhanced, ECM): the current admin (HA, via
   `matter/open_commissioning_window`) asks the device to accept a new PASE with a fresh,
-  temporary passcode. HA returns a new manual code and QR code. MatterPair shows both.
+  temporary passcode. HA returns a new manual code and QR code. Matthair shows both.
 * **Join from another ecosystem**: the other ecosystem opens a window and shows a code.
-  MatterPair sends it to HA with `matter/commission` and `network_only: true`. No BLE is
+  Matthair sends it to HA with `matter/commission` and `network_only: true`. No BLE is
   involved, because the device is already on the IP network.
 
 Matter 1.6 adds *Joint Fabric* (several controllers administering one shared fabric). It is not

@@ -20,7 +20,7 @@ object Diagnostics {
 
     suspend fun buildBundle(context: Context, connector: HaConnector): File {
         val sb = StringBuilder()
-        sb.appendLine("MatterPair diagnostics")
+        sb.appendLine("Matthair diagnostics")
         sb.appendLine("Created: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss Z", Locale.ROOT).format(Date())}")
         sb.appendLine("App: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
         sb.appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
@@ -44,7 +44,7 @@ object Diagnostics {
 
         val dir = File(context.cacheDir, "diagnostics").apply { mkdirs() }
         dir.listFiles()?.forEach { it.delete() }
-        val file = File(dir, "matterpair-diagnostics.txt")
+        val file = File(dir, "matthair-diagnostics.txt")
         file.writeText(sb.toString())
         return file
     }

@@ -85,7 +85,7 @@ private val AppShapes = Shapes(
 )
 
 @Composable
-fun MatterPairTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+fun MatthairTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     val ctx = LocalContext.current
     // Dynamic color ("Material You") is available on every supported SDK (minSdk 31).
     val base = runCatching { if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx) }
