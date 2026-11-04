@@ -36,7 +36,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -54,7 +53,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import io.github.dwicki.matthair.R
 import io.github.dwicki.matthair.commission.CheckAction
@@ -74,37 +72,30 @@ import io.github.dwicki.matthair.ui.components.StatusIcon
 import io.github.dwicki.matthair.ui.components.StepIndicator
 import io.github.dwicki.matthair.ui.flowLabel
 
-/**
- * Step 2: show what was scanned and run the traffic-light pre-flight check. Green items collapse
- * into a single "everything ok" row so that users only see what needs attention.
- */
+/** Step 2: shows what was scanned and runs the traffic-light pre-flight check. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CheckScreen(vm: MainViewModel, onBack: () -> Unit, onStart: () -> Unit, onWifi: () -> Unit) {
     val payload by vm.payload.collectAsState()
     val report by vm.environment.collectAsState()
     val details by vm.showDetails.collectAsState()
-    val ctx = LocalContext.current
-    var showOk by rememberSaveable { mutableStateOf(false) }
-    var proxyDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var confirmProxy by remember { mutableStateOf(false) }
 
     val permissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { vm.runCheck() }
     val enableBt = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { vm.runCheck() }
     LaunchedEffect(Unit) { vm.runCheck() }
 
-    fun act(a: CheckAction) = when (a) {
+    fun act(action: CheckAction) = when (action) {
         CheckAction.ENABLE_BLUETOOTH -> enableBt.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
         CheckAction.GRANT_PERMISSIONS -> permissions.launch(
             arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.POST_NOTIFICATIONS),
         )
-        CheckAction.BATTERY_SETTINGS -> ctx.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-        CheckAction.ENABLE_BLE_PROXY -> proxyDialog = true
+        CheckAction.BATTERY_SETTINGS -> context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+        CheckAction.ENABLE_BLE_PROXY -> confirmProxy = true
         CheckAction.SET_WIFI -> onWifi()
         CheckAction.SHARE_THREAD -> vm.shareThreadDataset()
     }
-
-    val problems = report.items.filter { it.status != CheckStatus.OK }
-    val ok = report.items.filter { it.status == CheckStatus.OK }
 
     Scaffold(
         topBar = {
@@ -125,55 +116,31 @@ fun CheckScreen(vm: MainViewModel, onBack: () -> Unit, onStart: () -> Unit, onWi
                 }
             }
         },
-    ) { pad ->
+    ) { padding ->
         LazyColumn(
-            Modifier.padding(pad).fillMaxSize(),
+            Modifier.padding(padding).fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item { StepIndicator(1, Modifier.padding(bottom = 8.dp)) }
-            payload?.let { p -> item { PayloadCard(p, details) } }
+            payload?.let { item { PayloadCard(it, details) } }
             if (payload?.flow == CommissioningFlow.CUSTOM) item { Banner(stringResource(R.string.flow_custom_warning), BannerKind.WARN) }
             if (payload?.flow == CommissioningFlow.USER_INTENT) item { Banner(stringResource(R.string.flow_user_intent_hint)) }
 
             val nearby = report.nearby
+            // A manual code only carries 4 of the 12 discriminator bits, so several devices can match.
             if (payload?.longDiscriminator == null && nearby.matching.size > 1) {
                 item { Banner(stringResource(R.string.check_multiple_candidates, nearby.matching.size), BannerKind.WARN) }
             }
             if (nearby.matching.isEmpty() && nearby.others > 0 && !report.running) {
                 item { Banner(stringResource(R.string.check_other_matter_devices, nearby.others)) }
             }
-
-            item {
-                Card(shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceContainer)) {
-                    Column(Modifier.animateContentSize()) {
-                        problems.forEachIndexed { i, item ->
-                            if (i > 0) HorizontalDivider(Modifier.padding(horizontal = 16.dp))
-                            CheckRow(item, details, ::act)
-                        }
-                        if (ok.isNotEmpty()) {
-                            if (problems.isNotEmpty()) HorizontalDivider(Modifier.padding(horizontal = 16.dp))
-                            Row(
-                                Modifier.fillMaxWidth().padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                StatusIcon(CheckStatus.OK)
-                                Spacer(Modifier.width(16.dp))
-                                Text("${ok.size} / ${report.items.size}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                                IconButton({ showOk = !showOk }) { Icon(if (showOk) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null) }
-                            }
-                            AnimatedVisibility(showOk) {
-                                Column { ok.forEach { CheckRow(it, details, ::act) } }
-                            }
-                        }
-                    }
-                }
-            }
-            if (details && nearby.matching.isNotEmpty()) {
+            item { CheckList(report.items, details, ::act) }
+            if (details) {
                 items(nearby.matching, key = { it.address }) { hit ->
+                    val ad = hit.advertisement
                     Text(
-                        "${hit.address} · ${hit.rssi} dBm · disc ${hit.advertisement.discriminator} · " +
-                            "${hit.advertisement.vendorId.hex()}/${hit.advertisement.productId.hex()}",
+                        "${hit.address} · ${hit.rssi} dBm · disc ${ad.discriminator} · ${ad.vendorId.hex()}/${ad.productId.hex()}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -182,14 +149,42 @@ fun CheckScreen(vm: MainViewModel, onBack: () -> Unit, onStart: () -> Unit, onWi
         }
     }
 
-    if (proxyDialog) {
+    if (confirmProxy) {
         AlertDialog(
-            onDismissRequest = { proxyDialog = false },
+            onDismissRequest = { confirmProxy = false },
             title = { Text(stringResource(R.string.enable_proxy_title)) },
             text = { Text(stringResource(R.string.enable_proxy_body)) },
-            confirmButton = { TextButton({ proxyDialog = false; vm.enableBleProxy() }) { Text(stringResource(R.string.enable_proxy_confirm)) } },
-            dismissButton = { TextButton({ proxyDialog = false }) { Text(stringResource(R.string.action_cancel)) } },
+            confirmButton = { TextButton({ confirmProxy = false; vm.enableBleProxy() }) { Text(stringResource(R.string.enable_proxy_confirm)) } },
+            dismissButton = { TextButton({ confirmProxy = false }) { Text(stringResource(R.string.action_cancel)) } },
         )
+    }
+}
+
+/** Problems first; the green items collapse into one "n / m" row so only what needs attention stands out. */
+@Composable
+private fun CheckList(items: List<CheckItem>, details: Boolean, onAction: (CheckAction) -> Unit) {
+    var showOk by rememberSaveable { mutableStateOf(false) }
+    val problems = items.filter { it.status != CheckStatus.OK }
+    val ok = items.filter { it.status == CheckStatus.OK }
+
+    Card(shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceContainer)) {
+        Column(Modifier.animateContentSize()) {
+            problems.forEachIndexed { index, item ->
+                if (index > 0) HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+                CheckRow(item, details, onAction)
+            }
+            if (ok.isEmpty()) return@Column
+            if (problems.isNotEmpty()) HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+            Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                StatusIcon(CheckStatus.OK)
+                Spacer(Modifier.width(16.dp))
+                Text("${ok.size} / ${items.size}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                IconButton({ showOk = !showOk }) { Icon(if (showOk) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null) }
+            }
+            AnimatedVisibility(showOk) {
+                Column { ok.forEach { CheckRow(it, details, onAction) } }
+            }
+        }
     }
 }
 
@@ -215,7 +210,7 @@ private fun CheckRow(item: CheckItem, details: Boolean, onAction: (CheckAction) 
 }
 
 @Composable
-private fun PayloadCard(p: SetupPayload, details: Boolean) {
+private fun PayloadCard(payload: SetupPayload, details: Boolean) {
     Card(shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(MaterialTheme.colorScheme.primaryContainer)) {
         Column(Modifier.fillMaxWidth().padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -223,18 +218,18 @@ private fun PayloadCard(p: SetupPayload, details: Boolean) {
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(stringResource(R.string.device_card_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                    Text(stringResource(flowLabel(p.flow)), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text(stringResource(flowLabel(payload.flow)), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
             }
             if (details) {
                 Spacer(Modifier.height(12.dp))
-                Field(stringResource(R.string.device_vendor), p.vendorId?.hex() ?: "–")
-                Field(stringResource(R.string.device_product), p.productId?.hex() ?: "–")
+                Field(stringResource(R.string.device_vendor), payload.vendorId?.hex() ?: "–")
+                Field(stringResource(R.string.device_product), payload.productId?.hex() ?: "–")
                 Field(
                     stringResource(R.string.device_discriminator),
-                    p.longDiscriminator?.toString() ?: stringResource(R.string.device_discriminator_short, p.shortDiscriminator),
+                    payload.longDiscriminator?.toString() ?: stringResource(R.string.device_discriminator_short, payload.shortDiscriminator),
                 )
-                Field(stringResource(R.string.device_passcode), p.maskedPasscode())
+                Field(stringResource(R.string.device_passcode), payload.maskedPasscode())
             }
         }
     }
