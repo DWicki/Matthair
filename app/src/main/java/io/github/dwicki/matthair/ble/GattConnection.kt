@@ -14,6 +14,7 @@ import android.os.Build
 import io.github.dwicki.matthair.matter.MatterBle
 import io.github.dwicki.matthair.util.AppLog
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -47,7 +48,7 @@ class GattConnection(
     @Volatile var mtu: Int = 23; private set
 
     private val callback = object : BluetoothGattCallback() {
-        override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
+        override fun onConnectionStateChange(client: BluetoothGatt, status: Int, newState: Int) {
             AppLog.d(TAG, "state=$newState status=$status")
             if (newState == BluetoothProfile.STATE_CONNECTED && status == BluetoothGatt.GATT_SUCCESS) {
                 connectWaiter?.complete(status)
@@ -63,47 +64,47 @@ class GattConnection(
             }
         }
 
-        override fun onServicesDiscovered(g: BluetoothGatt, status: Int) =
+        override fun onServicesDiscovered(client: BluetoothGatt, status: Int) =
             complete(status, "discovery_failed") { Unit }
 
-        override fun onMtuChanged(g: BluetoothGatt, newMtu: Int, status: Int) {
+        override fun onMtuChanged(client: BluetoothGatt, newMtu: Int, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) mtu = newMtu
             complete(status, "mtu_request_failed") { newMtu }
         }
 
-        override fun onCharacteristicRead(g: BluetoothGatt, c: BluetoothGattCharacteristic, value: ByteArray, status: Int) =
+        override fun onCharacteristicRead(client: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray, status: Int) =
             complete(status, "read_failed") { value }
 
         @Deprecated("Pre-API 33 callback")
-        override fun onCharacteristicRead(g: BluetoothGatt, c: BluetoothGattCharacteristic, status: Int) {
+        override fun onCharacteristicRead(client: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
                 @Suppress("DEPRECATION")
-                complete(status, "read_failed") { c.value ?: ByteArray(0) }
+                complete(status, "read_failed") { characteristic.value ?: ByteArray(0) }
             }
         }
 
-        override fun onCharacteristicWrite(g: BluetoothGatt, c: BluetoothGattCharacteristic, status: Int) =
+        override fun onCharacteristicWrite(client: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) =
             complete(status, "write_failed") { Unit }
 
-        override fun onDescriptorWrite(g: BluetoothGatt, d: BluetoothGattDescriptor, status: Int) =
+        override fun onDescriptorWrite(client: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) =
             complete(status, "subscribe_failed") { Unit }
 
-        override fun onCharacteristicChanged(g: BluetoothGatt, c: BluetoothGattCharacteristic, value: ByteArray) =
-            onNotification(c.uuid, value)
+        override fun onCharacteristicChanged(client: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) =
+            onNotification(characteristic.uuid, value)
 
         @Deprecated("Pre-API 33 callback")
-        override fun onCharacteristicChanged(g: BluetoothGatt, c: BluetoothGattCharacteristic) {
+        override fun onCharacteristicChanged(client: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
                 @Suppress("DEPRECATION")
-                onNotification(c.uuid, c.value ?: ByteArray(0))
+                onNotification(characteristic.uuid, characteristic.value ?: ByteArray(0))
             }
         }
     }
 
     private fun complete(status: Int, errorCode: String, value: () -> Any?) {
-        val p = pending ?: return
-        if (status == BluetoothGatt.GATT_SUCCESS) p.complete(value())
-        else p.completeExceptionally(BleException(errorCode, "GATT status $status", status))
+        val result = pending ?: return
+        if (status == BluetoothGatt.GATT_SUCCESS) result.complete(value())
+        else result.completeExceptionally(BleException(errorCode, "GATT status $status", status))
     }
 
     /**
@@ -120,14 +121,14 @@ class GattConnection(
             val waiter = CompletableDeferred<Int>()
             connectWaiter = waiter
             closingByUs = false
-            val g = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
-            gatt = g
+            val client = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
+            gatt = client
             try {
                 withTimeout(remaining) { waiter.await() }
                 connectWaiter = null
                 // Best effort tuning; failures here are not fatal.
-                g.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
-                runCatching { runOp { g.requestMtu(517) } }
+                client.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH)
+                runCatching { runOp { client.requestMtu(517) } }
                     .onFailure { AppLog.w(TAG, "MTU request failed, using $mtu") }
                 AppLog.i(TAG, "Connected (attempt $attempt), mtu=$mtu")
                 return@withLock mtu
@@ -135,7 +136,7 @@ class GattConnection(
                 lastError = e
                 connectWaiter = null
                 closingByUs = true
-                g.close()
+                client.close()
                 gatt = null
                 val status = (e as? BleException)?.gattStatus
                 AppLog.w(TAG, "Connect attempt $attempt failed (status=$status)")
@@ -144,26 +145,26 @@ class GattConnection(
         }
         throw when (lastError) {
             is BleException -> lastError
-            is kotlinx.coroutines.TimeoutCancellationException -> BleException("timeout", "Connection timed out")
+            is TimeoutCancellationException -> BleException("timeout", "Connection timed out")
             else -> BleException("connection_failed", lastError?.message ?: "Connection failed")
         }
     }
 
     suspend fun discoverServices(): List<UUID> = opLock.withLock {
-        val g = requireGatt()
-        runOp { g.discoverServices() }
-        g.services.map { it.uuid }
+        val client = requireGatt()
+        runOp { client.discoverServices() }
+        client.services.map { it.uuid }
     }
 
     fun characteristicsOf(service: UUID): List<BluetoothGattCharacteristic> {
-        val s = requireGatt().getService(service) ?: throw BleException("service_not_found", "Service $service not found")
-        return s.characteristics
+        val found = requireGatt().getService(service) ?: throw BleException("service_not_found", "Service $service not found")
+        return found.characteristics
     }
 
     suspend fun read(uuid: UUID): ByteArray = opLock.withLock {
-        val g = requireGatt()
-        val c = findCharacteristic(uuid)
-        runOp { g.readCharacteristic(c) } as ByteArray
+        val client = requireGatt()
+        val characteristic = findCharacteristic(uuid)
+        runOp { client.readCharacteristic(characteristic) } as ByteArray
     }
 
     suspend fun write(uuid: UUID, value: ByteArray, withResponse: Boolean) = opLock.withLock { writeLocked(uuid, value, withResponse) }
@@ -177,37 +178,37 @@ class GattConnection(
     }
 
     suspend fun requestMtu(value: Int): Int = opLock.withLock {
-        val g = requireGatt()
-        runOp { g.requestMtu(value) } as Int
+        val client = requireGatt()
+        runOp { client.requestMtu(value) } as Int
     }
 
     private suspend fun writeLocked(uuid: UUID, value: ByteArray, withResponse: Boolean) {
-        val g = requireGatt()
-        val c = findCharacteristic(uuid)
+        val client = requireGatt()
+        val characteristic = findCharacteristic(uuid)
         val type = if (withResponse) BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT else BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
         runOp {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                g.writeCharacteristic(c, value, type) == BluetoothStatusCodes.SUCCESS
+                client.writeCharacteristic(characteristic, value, type) == BluetoothStatusCodes.SUCCESS
             } else {
                 @Suppress("DEPRECATION")
-                c.writeType = type
+                characteristic.writeType = type
                 @Suppress("DEPRECATION")
-                c.value = value
+                characteristic.value = value
                 @Suppress("DEPRECATION")
-                g.writeCharacteristic(c)
+                client.writeCharacteristic(characteristic)
             }
         }
     }
 
     private suspend fun subscribeLocked(uuid: UUID, enable: Boolean) {
-        val g = requireGatt()
-        val c = findCharacteristic(uuid)
-        val props = c.properties
+        val client = requireGatt()
+        val characteristic = findCharacteristic(uuid)
+        val props = characteristic.properties
         val canIndicate = props and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0
         val canNotify = props and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0
         if (enable && !canIndicate && !canNotify) throw BleException("notify_not_supported", "No notify/indicate on $uuid")
-        if (!g.setCharacteristicNotification(c, enable)) throw BleException("subscribe_failed", "setCharacteristicNotification failed")
-        val cccd = c.getDescriptor(MatterBle.CCCD_UUID) ?: throw BleException("subscribe_failed", "No CCCD on $uuid")
+        if (!client.setCharacteristicNotification(characteristic, enable)) throw BleException("subscribe_failed", "setCharacteristicNotification failed")
+        val cccd = characteristic.getDescriptor(MatterBle.CCCD_UUID) ?: throw BleException("subscribe_failed", "No CCCD on $uuid")
         val value = when {
             !enable -> BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE
             canIndicate -> BluetoothGattDescriptor.ENABLE_INDICATION_VALUE
@@ -215,20 +216,20 @@ class GattConnection(
         }
         runOp {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                g.writeDescriptor(cccd, value) == BluetoothStatusCodes.SUCCESS
+                client.writeDescriptor(cccd, value) == BluetoothStatusCodes.SUCCESS
             } else {
                 @Suppress("DEPRECATION")
                 cccd.value = value
                 @Suppress("DEPRECATION")
-                g.writeDescriptor(cccd)
+                client.writeDescriptor(cccd)
             }
         }
     }
 
     /** Start one GATT op and wait for its callback. [start] returns false if Android refused it. */
     private suspend fun runOp(timeoutMs: Long = 10_000, start: () -> Boolean): Any? {
-        val p = CompletableDeferred<Any?>()
-        pending = p
+        val result = CompletableDeferred<Any?>()
+        pending = result
         try {
             // Android may refuse an op right after the previous callback while it is still
             // busy internally; retry a few times before giving up.
@@ -240,8 +241,8 @@ class GattConnection(
                 tries++
             }
             if (!started) throw BleException("internal_error", "GATT operation could not be started")
-            return withTimeout(timeoutMs) { p.await() }
-        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            return withTimeout(timeoutMs) { result.await() }
+        } catch (e: TimeoutCancellationException) {
             throw BleException("timeout", "GATT operation timed out")
         } finally {
             pending = null
@@ -256,11 +257,11 @@ class GattConnection(
 
     /** Disconnect and free the GATT client. Safe to call multiple times. */
     suspend fun disconnect() {
-        val g = gatt ?: return
+        val client = gatt ?: return
         closingByUs = true
-        runCatching { g.disconnect() }
+        runCatching { client.disconnect() }
         delay(150) // let the stack send LL_TERMINATE before closing
-        runCatching { g.close() }
+        runCatching { client.close() }
         gatt = null
         pending?.completeExceptionally(BleException("not_connected", "Disconnected"))
         AppLog.i(TAG, "Disconnected")

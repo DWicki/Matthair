@@ -9,6 +9,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import javax.net.ssl.SSLException
 
 /** An authenticated connection to one Home Assistant instance. */
 class HaSession(val http: OkHttpClient, val baseUrl: String, val api: HaApi) {
@@ -56,7 +57,7 @@ class HaConnector(private val config: ConfigRepository, private val auth: HaAuth
         withTimeoutOrNull(4000) {
             runCatching {
                 http.newCall(Request.Builder().url(url.trimEnd('/') + "/manifest.json").build()).execute().use { it.code in 200..499 }
-            }.getOrElse { it is javax.net.ssl.SSLException } // TLS errors must surface, not be hidden as "unreachable"
+            }.getOrElse { it is SSLException } // TLS errors must surface, not be hidden as "unreachable"
         } ?: false
     }
 

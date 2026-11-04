@@ -193,13 +193,13 @@ private fun ProgressRing(phase: Phase) {
 
 @Composable
 private fun Timeline(current: Phase) {
-    val c = LocalStatusColors.current
+    val statusColors = LocalStatusColors.current
     Card(shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceContainer), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(vertical = 8.dp)) {
             TIMELINE.forEach { p ->
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     when {
-                        p.ordinal < current.ordinal || current == Phase.DONE -> Icon(Icons.Rounded.CheckCircle, null, tint = c.ok, modifier = Modifier.size(22.dp))
+                        p.ordinal < current.ordinal || current == Phase.DONE -> Icon(Icons.Rounded.CheckCircle, null, tint = statusColors.ok, modifier = Modifier.size(22.dp))
                         p == current -> CircularProgressIndicator(Modifier.size(22.dp).padding(2.dp), strokeWidth = 2.5.dp)
                         else -> Icon(Icons.Rounded.RadioButtonUnchecked, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(22.dp))
                     }
@@ -218,10 +218,10 @@ private fun Timeline(current: Phase) {
 @Composable
 private fun FailureContent(s: CommissioningState) {
     val kind = s.failure ?: return
-    val c = LocalStatusColors.current
+    val statusColors = LocalStatusColors.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Spacer(Modifier.height(24.dp))
-        Icon(Icons.Rounded.ErrorOutline, null, tint = c.fail, modifier = Modifier.size(88.dp))
+        Icon(Icons.Rounded.ErrorOutline, null, tint = statusColors.fail, modifier = Modifier.size(88.dp))
         Spacer(Modifier.height(16.dp))
         Text(stringResource(R.string.fail_title), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
         Spacer(Modifier.height(8.dp))

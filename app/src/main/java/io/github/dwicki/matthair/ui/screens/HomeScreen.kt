@@ -89,8 +89,8 @@ fun HomeScreen(
                 text = { Text(stringResource(R.string.home_add_device)) },
             )
         },
-    ) { pad ->
-        PullToRefreshBox(isRefreshing = status is HaStatus.Connecting, onRefresh = { vm.refresh() }, modifier = Modifier.padding(pad)) {
+    ) { padding ->
+        PullToRefreshBox(isRefreshing = status is HaStatus.Connecting, onRefresh = { vm.refresh() }, modifier = Modifier.padding(padding)) {
             LazyColumn(
                 Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 96.dp),
@@ -134,12 +134,12 @@ fun HomeScreen(
 
 @Composable
 private fun StatusChip(status: HaStatus) {
-    val c = LocalStatusColors.current
+    val statusColors = LocalStatusColors.current
     val (text, color) = when (status) {
         HaStatus.Connecting -> stringResource(R.string.home_status_connecting) to MaterialTheme.colorScheme.outline
-        is HaStatus.Connected -> stringResource(R.string.home_status_connected, status.version) to c.ok
-        is HaStatus.Offline -> stringResource(R.string.home_status_offline) to c.fail
-        HaStatus.SignedOut -> stringResource(R.string.home_status_signed_out) to c.warn
+        is HaStatus.Connected -> stringResource(R.string.home_status_connected, status.version) to statusColors.ok
+        is HaStatus.Offline -> stringResource(R.string.home_status_offline) to statusColors.fail
+        HaStatus.SignedOut -> stringResource(R.string.home_status_signed_out) to statusColors.warn
     }
     AssistChip(
         onClick = {},
@@ -171,14 +171,14 @@ private fun AddHero(onAdd: () -> Unit) {
 
 @Composable
 fun DeviceListItem(row: DeviceRow, onClick: () -> Unit, areaName: String? = null, trailing: (@Composable () -> Unit)? = null) {
-    val c = LocalStatusColors.current
+    val statusColors = LocalStatusColors.current
     Card(onClick = onClick, shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceContainer)) {
         ListItem(
             leadingContent = {
                 Box(contentAlignment = Alignment.BottomEnd) {
                     Icon(Icons.Rounded.Hub, null, modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
                     if (row.available != null) {
-                        Box(Modifier.size(10.dp).clip(CircleShape).background(if (row.available) c.ok else c.fail))
+                        Box(Modifier.size(10.dp).clip(CircleShape).background(if (row.available) statusColors.ok else statusColors.fail))
                     }
                 }
             },

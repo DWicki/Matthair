@@ -109,14 +109,14 @@ fun ScanScreen(
     onBack: () -> Unit,
     onAccepted: () -> Unit,
 ) {
-    val ctx = LocalContext.current
+    val context = LocalContext.current
     val view = LocalView.current
     val scope = rememberCoroutineScope()
     var manual by rememberSaveable { mutableStateOf(false) }
     var error by remember { mutableStateOf<PayloadError?>(null) }
     var noCodeInImage by remember { mutableStateOf(false) }
     var hasCamera by remember {
-        mutableStateOf(ContextCompat.checkSelfPermission(ctx, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
+        mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
     }
     val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { hasCamera = it }
     LaunchedEffect(Unit) { if (!hasCamera && !manual) cameraPermission.launch(Manifest.permission.CAMERA) }
@@ -134,7 +134,7 @@ fun ScanScreen(
         scope.launch {
             val text = withContext(Dispatchers.Default) {
                 runCatching {
-                    val src = ImageDecoder.createSource(ctx.contentResolver, uri)
+                    val src = ImageDecoder.createSource(context.contentResolver, uri)
                     val bmp = ImageDecoder.decodeBitmap(src) { d, _, _ -> d.allocator = ImageDecoder.ALLOCATOR_SOFTWARE }
                     QrCodes.decode(bmp)
                 }.getOrNull()
@@ -151,8 +151,8 @@ fun ScanScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
         },
-    ) { pad ->
-        Column(Modifier.padding(pad).fillMaxSize()) {
+    ) { padding ->
+        Column(Modifier.padding(padding).fillMaxSize()) {
             if (showSteps) { StepIndicator(0); Spacer(Modifier.height(16.dp)) }
             if (manual) {
                 ManualEntry(error, onChange = { error = null }, onSubmit = ::handle)
@@ -209,7 +209,7 @@ fun ScanScreen(
 /** Live camera preview that reports the first QR code accepted by [accept]. Shared by the setup-code and Wi-Fi screens. */
 @Composable
 internal fun QrCameraPreview(accept: (String) -> Boolean = { it.contains("MT:", ignoreCase = true) }, onCode: (String) -> Unit) {
-    val ctx = LocalContext.current
+    val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val executor = remember { Executors.newSingleThreadExecutor() }
     DisposableEffect(Unit) { onDispose { executor.shutdown() } }
@@ -229,7 +229,7 @@ internal fun QrCameraPreview(accept: (String) -> Boolean = { it.contains("MT:", 
                     provider.unbindAll()
                     provider.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
                 }
-            }, ContextCompat.getMainExecutor(ctx))
+            }, ContextCompat.getMainExecutor(context))
             previewView
         },
     )

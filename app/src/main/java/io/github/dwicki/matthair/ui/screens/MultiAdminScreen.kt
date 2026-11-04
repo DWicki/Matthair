@@ -41,8 +41,8 @@ import io.github.dwicki.matthair.ui.theme.LocalStatusColors
 fun MultiAdminIntroScreen(onBack: () -> Unit, onScan: () -> Unit) {
     Scaffold(topBar = {
         TopAppBar(title = {}, navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back)) } })
-    }) { pad ->
-        Column(Modifier.padding(pad).padding(24.dp).fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+    }) { padding ->
+        Column(Modifier.padding(padding).padding(24.dp).fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
             HeroIcon(Icons.Rounded.SyncAlt, size = 140.dp)
             Spacer(Modifier.height(24.dp))
             Text(stringResource(R.string.multiadmin_title), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)

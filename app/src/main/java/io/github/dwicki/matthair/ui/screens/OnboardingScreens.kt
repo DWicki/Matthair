@@ -61,9 +61,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import io.github.dwicki.matthair.R
-import io.github.dwicki.matthair.ha.ServerProbe
 import io.github.dwicki.matthair.ha.HaAuth
 import io.github.dwicki.matthair.ha.HttpClients
+import io.github.dwicki.matthair.ha.ServerProbe
 import io.github.dwicki.matthair.ui.MainViewModel
 import io.github.dwicki.matthair.ui.components.Banner
 import io.github.dwicki.matthair.ui.components.BannerKind
@@ -118,19 +118,18 @@ fun ServerScreen(vm: MainViewModel, onBack: () -> Unit, onReady: () -> Unit) {
     val problem by vm.serverProblem.collectAsState()
     val valid = ServerProbe.isValidUrl(local)
 
-    Scaffold(topBar = {
-        TopAppBar(title = {}, navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back)) } })
-    }) { pad ->
-        Column(Modifier.padding(pad).padding(horizontal = 24.dp).fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
+    Scaffold(topBar = { BackTopBar(onBack) }) { padding ->
+        Column(Modifier.padding(padding).padding(horizontal = 24.dp).fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
             Text(stringResource(R.string.server_title), style = MaterialTheme.typography.headlineMedium)
             Spacer(Modifier.height(24.dp))
+            val showInvalid = touched && local.isNotBlank() && !valid
             OutlinedTextField(
                 local, { local = it; touched = true; vm.clearServerProblem() },
                 label = { Text(stringResource(R.string.server_local_label)) },
                 placeholder = { Text(stringResource(R.string.server_local_hint)) },
                 singleLine = true,
-                isError = touched && local.isNotBlank() && !valid,
-                supportingText = { if (touched && local.isNotBlank() && !valid) Text(stringResource(R.string.server_invalid_url)) },
+                isError = showInvalid,
+                supportingText = { if (showInvalid) Text(stringResource(R.string.server_invalid_url)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -143,9 +142,10 @@ fun ServerScreen(vm: MainViewModel, onBack: () -> Unit, onReady: () -> Unit) {
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
                 modifier = Modifier.fillMaxWidth(),
             )
-            problem?.let { p ->
+            problem?.let {
                 Spacer(Modifier.height(16.dp))
-                Banner(stringResource(R.string.server_unreachable, p.tried.drop(1).joinToString("\n")), BannerKind.ERROR)
+                // The first entry is what the user typed; the banner lists the variants we tried on top.
+                Banner(stringResource(R.string.server_unreachable, it.tried.drop(1).joinToString("\n")), BannerKind.ERROR)
             }
             if (valid && ServerProbe.normalizeUrl(local).startsWith("http://")) {
                 Spacer(Modifier.height(16.dp))
@@ -161,16 +161,29 @@ fun ServerScreen(vm: MainViewModel, onBack: () -> Unit, onReady: () -> Unit) {
         }
     }
 
-    cert?.let { prompt ->
-        AlertDialog(
-            onDismissRequest = vm::dismissCert,
-            icon = { Icon(Icons.Rounded.Lock, null) },
-            title = { Text(stringResource(R.string.cert_title)) },
-            text = { Text(stringResource(R.string.cert_body, HttpClients.prettyFingerprint(prompt.sha256))) },
-            confirmButton = { TextButton({ vm.trustCertificate(onReady) }) { Text(stringResource(R.string.cert_trust)) } },
-            dismissButton = { TextButton(vm::dismissCert) { Text(stringResource(R.string.action_cancel)) } },
-        )
-    }
+    cert?.let { CertificateDialog(it.sha256, onTrust = { vm.trustCertificate(onReady) }, onDismiss = vm::dismissCert) }
+}
+
+/** A self-signed certificate is only trusted after the user compared its fingerprint. */
+@Composable
+private fun CertificateDialog(sha256: String, onTrust: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.Lock, null) },
+        title = { Text(stringResource(R.string.cert_title)) },
+        text = { Text(stringResource(R.string.cert_body, HttpClients.prettyFingerprint(sha256))) },
+        confirmButton = { TextButton(onTrust) { Text(stringResource(R.string.cert_trust)) } },
+        dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BackTopBar(onBack: () -> Unit, title: String? = null) {
+    TopAppBar(
+        title = { if (title != null) Text(title) },
+        navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back)) } },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -180,14 +193,16 @@ fun AuthScreen(vm: MainViewModel, onBack: () -> Unit, onOAuth: () -> Unit, onSig
     var token by remember { mutableStateOf("") }
     val busy by vm.busy.collectAsState()
     val corrected by vm.correctedUrl.collectAsState()
+    val config by vm.config.collectAsState()
 
-    Scaffold(topBar = {
-        TopAppBar(title = {}, navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back)) } })
-    }) { pad ->
-        Column(Modifier.padding(pad).padding(horizontal = 24.dp).fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
+    Scaffold(topBar = { BackTopBar(onBack) }) { padding ->
+        Column(Modifier.padding(padding).padding(horizontal = 24.dp).fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
             Text(stringResource(R.string.auth_title), style = MaterialTheme.typography.headlineMedium)
-            Text(vm.config.collectAsState().value?.localUrl.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            corrected?.let { Spacer(Modifier.height(12.dp)); Banner(stringResource(R.string.server_corrected, it)) }
+            Text(config?.localUrl.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            corrected?.let {
+                Spacer(Modifier.height(12.dp))
+                Banner(stringResource(R.string.server_corrected, it))
+            }
             Spacer(Modifier.height(24.dp))
             AuthOption(Icons.Rounded.Login, stringResource(R.string.auth_oauth), stringResource(R.string.auth_oauth_desc), highlighted = true, onClick = onOAuth)
             Spacer(Modifier.height(12.dp))
@@ -205,7 +220,7 @@ fun AuthScreen(vm: MainViewModel, onBack: () -> Unit, onOAuth: () -> Unit, onSig
                 Spacer(Modifier.height(16.dp))
                 PrimaryButton(
                     if (busy) stringResource(R.string.auth_checking) else stringResource(R.string.action_continue),
-                    { vm.useToken(token) { ok -> if (ok) onSignedIn() } },
+                    { vm.useToken(token) { signedIn -> if (signedIn) onSignedIn() } },
                     enabled = token.length > 20 && !busy,
                 )
             }
@@ -216,7 +231,7 @@ fun AuthScreen(vm: MainViewModel, onBack: () -> Unit, onOAuth: () -> Unit, onSig
 }
 
 @Composable
-private fun AuthOption(icon: ImageVector, title: String, desc: String, highlighted: Boolean, onClick: () -> Unit) {
+private fun AuthOption(icon: ImageVector, title: String, description: String, highlighted: Boolean, onClick: () -> Unit) {
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(
@@ -230,68 +245,69 @@ private fun AuthOption(icon: ImageVector, title: String, desc: String, highlight
             Spacer(Modifier.width(16.dp))
             Column {
                 Text(title, style = MaterialTheme.typography.titleMedium)
-                Text(desc, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
 }
 
-/**
- * Hosts Home Assistant's own login page. When HA redirects to our loopback redirect URI we grab
- * the `code` and stop: the redirect is never actually loaded, so nothing listens on 127.0.0.1.
- */
-@OptIn(ExperimentalMaterial3Api::class)
+/** Hosts Home Assistant's own login page. */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun OAuthWebViewScreen(vm: MainViewModel, onBack: () -> Unit, onSignedIn: () -> Unit) {
     val state = remember { UUID.randomUUID().toString() }
     val url = remember { vm.authorizeUrl(state) }
-    val pin = vm.config.collectAsState().value?.pinnedCertSha256
+    val config by vm.config.collectAsState()
     val busy by vm.busy.collectAsState()
 
-    Scaffold(topBar = {
-        TopAppBar(title = { Text(stringResource(R.string.auth_oauth)) }, navigationIcon = {
-            IconButton(onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back)) }
-        })
-    }) { pad ->
+    Scaffold(topBar = { BackTopBar(onBack, stringResource(R.string.auth_oauth)) }) { padding ->
         if (busy) {
-            Column(Modifier.padding(pad).fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.padding(padding).fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                 CircularProgressIndicator()
                 Spacer(Modifier.height(16.dp))
                 Text(stringResource(R.string.auth_checking))
             }
         } else {
             AndroidView(
-                modifier = Modifier.padding(pad).fillMaxSize(),
-                factory = { ctx ->
-                    WebView(ctx).apply {
+                modifier = Modifier.padding(padding).fillMaxSize(),
+                factory = { context ->
+                    WebView(context).apply {
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
-                        webViewClient = object : WebViewClient() {
-                            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                                val u = request.url
-                                if (u.toString().startsWith(HaAuth.REDIRECT_URI)) {
-                                    val code = u.getQueryParameter("code")
-                                    if (code != null && u.getQueryParameter("state") == state) {
-                                        vm.completeOAuth(code) { ok -> if (ok) onSignedIn() }
-                                    }
-                                    return true
-                                }
-                                return false
-                            }
-
-                            @SuppressLint("WebViewClientOnReceivedSslError")
-                            override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
-                                // Only accept the exact certificate the user pinned earlier.
-                                val x509 = error.certificate.x509Certificate
-                                if (pin != null && x509 != null && HttpClients.sha256(x509).equals(pin, true)) handler.proceed()
-                                else handler.cancel()
-                            }
+                        webViewClient = LoginWebViewClient(state, config?.pinnedCertSha256) { code ->
+                            vm.completeOAuth(code) { signedIn -> if (signedIn) onSignedIn() }
                         }
                         loadUrl(url)
                     }
                 },
             )
         }
+    }
+}
+
+/**
+ * Catches HA's redirect to our loopback URI and hands over the `code`. The redirect is never
+ * actually loaded, so nothing has to listen on 127.0.0.1.
+ */
+private class LoginWebViewClient(
+    private val expectedState: String,
+    private val pinnedCertSha256: String?,
+    private val onCode: (String) -> Unit,
+) : WebViewClient() {
+
+    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+        val uri = request.url
+        if (!uri.toString().startsWith(HaAuth.REDIRECT_URI)) return false
+        val code = uri.getQueryParameter("code")
+        if (code != null && uri.getQueryParameter("state") == expectedState) onCode(code)
+        return true
+    }
+
+    /** Only the exact certificate the user pinned earlier is accepted. */
+    @SuppressLint("WebViewClientOnReceivedSslError")
+    override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
+        val certificate = error.certificate.x509Certificate
+        val pinned = pinnedCertSha256 != null && certificate != null && HttpClients.sha256(certificate).equals(pinnedCertSha256, ignoreCase = true)
+        if (pinned) handler.proceed() else handler.cancel()
     }
 }

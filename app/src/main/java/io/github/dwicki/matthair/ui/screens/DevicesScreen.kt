@@ -39,8 +39,8 @@ fun DevicesScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (deviceId: Stri
             title = { Text(stringResource(R.string.devices_title)) },
             navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back)) } },
         )
-    }) { pad ->
-        PullToRefreshBox(status is HaStatus.Connecting, { vm.refresh() }, Modifier.padding(pad)) {
+    }) { padding ->
+        PullToRefreshBox(status is HaStatus.Connecting, { vm.refresh() }, Modifier.padding(padding)) {
             LazyColumn(
                 Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),

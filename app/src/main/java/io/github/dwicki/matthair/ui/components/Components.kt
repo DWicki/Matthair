@@ -82,7 +82,7 @@ fun StepIndicator(current: Int, modifier: Modifier = Modifier) {
 /** Animated traffic-light icon for a check. */
 @Composable
 fun StatusIcon(status: CheckStatus, size: Dp = 24.dp) {
-    val c = LocalStatusColors.current
+    val statusColors = LocalStatusColors.current
     AnimatedContent(
         status,
         transitionSpec = { (scaleIn() + fadeIn()) togetherWith fadeOut() },
@@ -90,9 +90,9 @@ fun StatusIcon(status: CheckStatus, size: Dp = 24.dp) {
     ) { s ->
         when (s) {
             CheckStatus.PENDING -> CircularProgressIndicator(Modifier.size(size).padding(3.dp), strokeWidth = 2.5.dp)
-            CheckStatus.OK -> Icon(Icons.Rounded.CheckCircle, null, tint = c.ok, modifier = Modifier.size(size))
-            CheckStatus.WARN -> Icon(Icons.Rounded.Warning, null, tint = c.warn, modifier = Modifier.size(size))
-            CheckStatus.FAIL -> Icon(Icons.Rounded.Error, null, tint = c.fail, modifier = Modifier.size(size))
+            CheckStatus.OK -> Icon(Icons.Rounded.CheckCircle, null, tint = statusColors.ok, modifier = Modifier.size(size))
+            CheckStatus.WARN -> Icon(Icons.Rounded.Warning, null, tint = statusColors.warn, modifier = Modifier.size(size))
+            CheckStatus.FAIL -> Icon(Icons.Rounded.Error, null, tint = statusColors.fail, modifier = Modifier.size(size))
         }
     }
 }
@@ -102,13 +102,13 @@ enum class BannerKind { INFO, WARN, ERROR }
 /** Rounded inline message used for hints, warnings and errors. */
 @Composable
 fun Banner(text: String, kind: BannerKind = BannerKind.INFO, modifier: Modifier = Modifier, action: (@Composable () -> Unit)? = null) {
-    val c = LocalStatusColors.current
+    val statusColors = LocalStatusColors.current
     val (bg, fg, icon) = when (kind) {
         BannerKind.INFO -> Triple(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer, Icons.Rounded.Info)
-        BannerKind.WARN -> Triple(c.warnContainer, MaterialTheme.colorScheme.onSurface, Icons.Rounded.Warning)
-        BannerKind.ERROR -> Triple(c.failContainer, MaterialTheme.colorScheme.onSurface, Icons.Rounded.Error)
+        BannerKind.WARN -> Triple(statusColors.warnContainer, MaterialTheme.colorScheme.onSurface, Icons.Rounded.Warning)
+        BannerKind.ERROR -> Triple(statusColors.failContainer, MaterialTheme.colorScheme.onSurface, Icons.Rounded.Error)
     }
-    val tint = when (kind) { BannerKind.INFO -> fg; BannerKind.WARN -> c.warn; BannerKind.ERROR -> c.fail }
+    val tint = when (kind) { BannerKind.INFO -> fg; BannerKind.WARN -> statusColors.warn; BannerKind.ERROR -> statusColors.fail }
     Surface(color = bg, shape = MaterialTheme.shapes.medium, modifier = modifier.fillMaxWidth()) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
             Icon(icon, null, tint = tint, modifier = Modifier.size(22.dp))

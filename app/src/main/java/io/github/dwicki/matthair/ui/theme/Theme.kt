@@ -10,6 +10,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
@@ -86,12 +87,12 @@ private val AppShapes = Shapes(
 
 @Composable
 fun MatthairTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    val ctx = LocalContext.current
+    val context = LocalContext.current
     // Dynamic color ("Material You") is available on every supported SDK (minSdk 31).
-    val base = runCatching { if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx) }
+    val base = runCatching { if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context) }
         .getOrElse { if (dark) DarkColors else LightColors }
     val colors = if (dark) withTintedSurfaces(base) else base
-    androidx.compose.runtime.CompositionLocalProvider(LocalStatusColors provides if (dark) DarkStatus else LightStatus) {
+    CompositionLocalProvider(LocalStatusColors provides if (dark) DarkStatus else LightStatus) {
         MaterialTheme(colorScheme = colors, typography = AppTypography, shapes = AppShapes, content = content)
     }
 }

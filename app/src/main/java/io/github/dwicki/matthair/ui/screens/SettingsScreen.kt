@@ -1,5 +1,6 @@
 package io.github.dwicki.matthair.ui.screens
 
+import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.clickable
@@ -45,16 +46,16 @@ import io.github.dwicki.matthair.ui.MainViewModel
 fun SettingsScreen(vm: MainViewModel, onBack: () -> Unit, onSignedOut: () -> Unit, onShareDiagnostics: () -> Unit) {
     val config by vm.config.collectAsState()
     val details by vm.showDetails.collectAsState()
-    val ctx = LocalContext.current
+    val context = LocalContext.current
 
     Scaffold(topBar = {
         TopAppBar(
             title = { Text(stringResource(R.string.settings_title)) },
             navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back)) } },
         )
-    }) { pad ->
-        Column(Modifier.padding(pad).fillMaxSize().verticalScroll(rememberScrollState())) {
-            Section(stringResource(R.string.settings_server))
+    }) { padding ->
+        Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())) {
+            GroupHeader(stringResource(R.string.settings_server))
             ListItem(
                 leadingContent = { Icon(Icons.Rounded.Home, null) },
                 headlineContent = { Text(config?.localUrl ?: "–") },
@@ -75,11 +76,7 @@ fun SettingsScreen(vm: MainViewModel, onBack: () -> Unit, onSignedOut: () -> Uni
             ListItem(
                 leadingContent = { Icon(Icons.Rounded.Language, null) },
                 headlineContent = { Text(stringResource(R.string.settings_language)) },
-                modifier = Modifier.clickableItem {
-                    // Per-app language picker (Android 13+); falls back to system settings.
-                    val intent = Intent(Settings.ACTION_APP_LOCALE_SETTINGS, "package:${ctx.packageName}".toUri())
-                    runCatching { ctx.startActivity(intent) }.onFailure { ctx.startActivity(Intent(Settings.ACTION_LOCALE_SETTINGS)) }
-                },
+                modifier = Modifier.clickableItem { openLanguageSettings(context) },
             )
             ListItem(
                 leadingContent = { Icon(Icons.Rounded.BugReport, null) },
@@ -88,7 +85,7 @@ fun SettingsScreen(vm: MainViewModel, onBack: () -> Unit, onSignedOut: () -> Uni
                 modifier = Modifier.clickableItem(onShareDiagnostics),
             )
             HorizontalDivider()
-            Section(stringResource(R.string.settings_zigbee))
+            GroupHeader(stringResource(R.string.settings_zigbee))
             ListItem(
                 leadingContent = { Icon(Icons.Rounded.Wifi, null) },
                 headlineContent = { Text(stringResource(R.string.settings_zigbee_desc)) },
@@ -110,8 +107,14 @@ fun SettingsScreen(vm: MainViewModel, onBack: () -> Unit, onSignedOut: () -> Uni
 }
 
 @Composable
-private fun Section(title: String) {
+private fun GroupHeader(title: String) {
     Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 4.dp))
 }
 
 private fun Modifier.clickableItem(onClick: () -> Unit) = this.clickable(onClick = onClick)
+
+/** The per-app language picker of Android 13+, or the system language settings as a fallback. */
+private fun openLanguageSettings(context: Context) {
+    val perApp = Intent(Settings.ACTION_APP_LOCALE_SETTINGS, "package:${context.packageName}".toUri())
+    runCatching { context.startActivity(perApp) }.onFailure { context.startActivity(Intent(Settings.ACTION_LOCALE_SETTINGS)) }
+}
