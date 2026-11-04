@@ -17,7 +17,7 @@
         android:strokeWidth="4.5"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M28,49 L54,26 L80,49 M35,43 L35,76 L73,76 L73,43" />
+        android:pathData="M34,71 L34,53 Q34,49 37.5,45.5 L50.5,32.5 Q54,29 57.5,32.5 L70.5,45.5 Q74,49 74,53 L74,71 Q74,76 69,76 L39,76 Q34,76 34,71 Z" />
 
     <!-- Three linked nodes -->
     <path
