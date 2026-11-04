@@ -262,6 +262,38 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         refresh()
     }
 
+    /**
+     * Rename a device and/or move it to another room. An empty name restores the name the device
+     * reports itself (HA `name_by_user = null`); [newAreaName] creates the room first.
+     */
+    fun updateDevice(device: HaDevice, name: String, areaId: String?, newAreaName: String?) = viewModelScope.launch {
+        _busy.value = true
+        runCatching {
+            val api = c.connector.session().api
+            val area = if (!newAreaName.isNullOrBlank()) api.createArea(newAreaName.trim()).id else areaId
+            val custom = name.trim().takeIf { it.isNotEmpty() && it != device.name }
+            api.updateDevice(device.id, custom, area)
+        }.onSuccess { _result.value = UiResult.Message(app.matterpair.R.string.devices_saved) }
+            .onFailure { _result.value = UiResult.Error(it.message ?: "?") }
+        _busy.value = false
+        refresh()
+    }
+
+    /** Data for the device overview screen; diagnostics may fail for offline nodes. */
+    data class DeviceDetail(val diagnostics: app.matterpair.ha.NodeDiagnostics?, val error: String?)
+
+    private val _detail = MutableStateFlow<DeviceDetail?>(null)
+    val detail: StateFlow<DeviceDetail?> = _detail.asStateFlow()
+
+    fun loadDetail(deviceId: String) = viewModelScope.launch {
+        _detail.value = null
+        _detail.value = runCatching { c.connector.session().api.nodeDiagnostics(deviceId) }
+            .fold({ DeviceDetail(it, null) }, { DeviceDetail(null, it.message) })
+    }
+
+    /** URL of the device page in the HA web UI. */
+    fun haDeviceUrl(deviceId: String): String? = c.config.config.value?.localUrl?.let { "$it/config/devices/device/$deviceId" }
+
     /** Opens a commissioning window so another ecosystem can add the device (multi-admin). */
     fun shareDevice(device: HaDevice, onCodes: (manual: String, qr: String) -> Unit) = viewModelScope.launch {
         _busy.value = true

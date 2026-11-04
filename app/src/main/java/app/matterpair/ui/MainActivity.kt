@@ -38,6 +38,7 @@ import androidx.navigation.compose.rememberNavController
 import app.matterpair.R
 import app.matterpair.ui.screens.AuthScreen
 import app.matterpair.ui.screens.CheckScreen
+import app.matterpair.ui.screens.DeviceScreen
 import app.matterpair.ui.screens.DevicesScreen
 import app.matterpair.ui.screens.DoneScreen
 import app.matterpair.ui.screens.HomeScreen
@@ -66,6 +67,8 @@ private object Routes {
     const val DONE = "add/done"
     const val WIFI = "add/wifi"
     const val DEVICES = "devices"
+    const val DEVICE = "device/{id}"
+    fun device(id: String) = "device/$id"
     const val SETTINGS = "settings"
     const val MULTI_INTRO = "multi/intro"
     const val MULTI_SCAN = "multi/scan"
@@ -184,6 +187,7 @@ class MainActivity : ComponentActivity() {
                         onAdd = { vm.clearPayload(); navController.navigate(Routes.SCAN) },
                         onMultiAdmin = { vm.clearPayload(); navController.navigate(Routes.MULTI_INTRO) },
                         onDevices = { navController.navigate(Routes.DEVICES) },
+                        onOpenDevice = { navController.navigate(Routes.device(it)) },
                         onSettings = { navController.navigate(Routes.SETTINGS) },
                     )
                 }
@@ -213,7 +217,12 @@ class MainActivity : ComponentActivity() {
                     )
                 }
                 composable(Routes.DONE) { DoneScreen(vm) { navController.popBackStack(Routes.HOME, false) } }
-                composable(Routes.DEVICES) { DevicesScreen(vm) { navController.popBackStack() } }
+                composable(Routes.DEVICES) {
+                    DevicesScreen(vm, onBack = { navController.popBackStack() }, onOpen = { navController.navigate(Routes.device(it)) })
+                }
+                composable(Routes.DEVICE) { entry ->
+                    DeviceScreen(vm, entry.arguments?.getString("id").orEmpty()) { navController.popBackStack() }
+                }
                 composable(Routes.SETTINGS) {
                     SettingsScreen(
                         vm, onBack = { navController.popBackStack() },

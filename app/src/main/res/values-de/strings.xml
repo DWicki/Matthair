@@ -206,6 +206,36 @@
 
     <!-- Devices -->
     <string name="devices_title">Matter-Geräte</string>
+    <string name="device_action_edit">Umbenennen</string>
+    <string name="device_action_share">Teilen</string>
+    <string name="device_section_connection">Verbindung</string>
+    <string name="device_section_ecosystems">Verbundene Systeme</string>
+    <string name="device_section_info">Gerät</string>
+    <string name="device_diag_unavailable">Verbindungsdetails sind gerade nicht verfügbar (das Gerät ist vielleicht offline).</string>
+    <string name="device_network">Netz</string>
+    <string name="device_node_type">Gerätetyp</string>
+    <string name="device_ip">IP-Adresse</string>
+    <string name="device_mac">MAC-Adresse</string>
+    <string name="device_fabric_this">Dieses Home Assistant</string>
+    <string name="device_model">Modell</string>
+    <string name="device_firmware">Firmware</string>
+    <string name="device_hardware">Hardware</string>
+    <string name="device_serial">Seriennummer</string>
+    <string name="device_original_name">Ursprünglicher Name</string>
+    <string name="device_node_id">Matter-Node-ID</string>
+    <string name="device_open_in_ha">In Home Assistant öffnen</string>
+    <string name="net_thread">Thread</string>
+    <string name="net_wifi">WLAN</string>
+    <string name="net_ethernet">Ethernet</string>
+    <string name="net_unknown">Unbekannt</string>
+    <string name="node_end_device">Endgerät</string>
+    <string name="node_sleepy">Batteriegerät (schlafend)</string>
+    <string name="node_router">Thread-Router</string>
+    <string name="node_bridge">Bridge</string>
+    <string name="share_hint_other_app">Wähle in der anderen App „Matter-Gerät hinzufügen“ und scanne diesen Code.</string>
+    <string name="devices_edit">Umbenennen und Raum</string>
+    <string name="devices_name_hint">Leer lassen für „%1$s“</string>
+    <string name="devices_saved">Gespeichert</string>
     <string name="devices_share">Mit anderer App teilen</string>
     <string name="devices_remove">Entfernen</string>
     <string name="devices_remove_title">%1$s entfernen?</string>

@@ -43,9 +43,33 @@ data class HaDevice(
     val model: String?,
     val configEntries: List<String>,
     val matterIdentifier: String?,
+    val swVersion: String? = null,
+    val hwVersion: String? = null,
+    val serialNumber: String? = null,
 ) {
     val displayName get() = nameByUser ?: name
 }
+
+/** One fabric (ecosystem) a node belongs to, e.g. Home Assistant, Google, Apple, Alexa. */
+data class FabricInfo(val fabricIndex: Int, val vendorId: Int, val vendorName: String?, val label: String?)
+
+/**
+ * `matter/node_diagnostics` result (python-matter-server `NodeDiagnostics`, also produced by the
+ * matter.js server). `ip_adresses` is spelled that way upstream; both spellings are accepted.
+ */
+data class NodeDiagnostics(
+    val nodeId: Long,
+    /** "thread", "wifi", "ethernet" or "unknown" */
+    val networkType: String,
+    /** "end_device", "sleepy_end_device", "routing_end_device", "bridge" or "unknown" */
+    val nodeType: String,
+    val networkName: String?,
+    val ipAddresses: List<String>,
+    val macAddress: String?,
+    val available: Boolean,
+    val fabrics: List<FabricInfo>,
+    val ownFabricIndex: Int?,
+)
 
 data class HaArea(val id: String, val name: String)
 
@@ -152,6 +176,25 @@ class HaApi(val ws: HaWebSocket, private val http: OkHttpClient, private val bas
         return (r.str("setup_manual_code") ?: "") to (r.str("setup_qr_code") ?: "")
     }
 
+    suspend fun nodeDiagnostics(deviceId: String): NodeDiagnostics {
+        val o = ws.call("matter/node_diagnostics", mapOf("device_id" to JsonPrimitive(deviceId))).obj
+        val ips = (o["ip_adresses"] ?: o["ip_addresses"]) as? JsonArray
+        return NodeDiagnostics(
+            nodeId = o.long("node_id") ?: -1,
+            networkType = o.str("network_type") ?: "unknown",
+            nodeType = o.str("node_type") ?: "unknown",
+            networkName = o.str("network_name"),
+            ipAddresses = ips.orEmpty().mapNotNull { (it as? JsonPrimitive)?.content },
+            macAddress = o.str("mac_address"),
+            available = o.bool("available") == true,
+            fabrics = (o["active_fabrics"] as? JsonArray).orEmpty().mapNotNull { e ->
+                val f = e as? JsonObject ?: return@mapNotNull null
+                FabricInfo(f.int("fabric_index") ?: 0, f.int("vendor_id") ?: 0, f.str("vendor_name"), f.str("fabric_label"))
+            },
+            ownFabricIndex = o.int("active_fabric_index"),
+        )
+    }
+
     suspend fun matterConfigEntryId(): String? = configEntries("matter").firstOrNull()?.str("entry_id")
 
     suspend fun configEntries(domain: String): List<JsonObject> =
@@ -172,6 +215,9 @@ class HaApi(val ws: HaWebSocket, private val http: OkHttpClient, private val bas
             configEntries = (d["config_entries"] as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.content },
             matterIdentifier = identifiers.firstOrNull { (it.getOrNull(0) as? JsonPrimitive)?.content == "matter" }
                 ?.getOrNull(1)?.let { (it as? JsonPrimitive)?.content },
+            swVersion = d.str("sw_version"),
+            hwVersion = d.str("hw_version"),
+            serialNumber = d.str("serial_number"),
         )
     }
 

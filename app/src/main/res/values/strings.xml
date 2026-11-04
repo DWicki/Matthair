@@ -208,6 +208,36 @@
 
     <!-- Devices -->
     <string name="devices_title">Matter devices</string>
+    <string name="device_action_edit">Rename</string>
+    <string name="device_action_share">Share</string>
+    <string name="device_section_connection">Connection</string>
+    <string name="device_section_ecosystems">Connected ecosystems</string>
+    <string name="device_section_info">Device</string>
+    <string name="device_diag_unavailable">Connection details are not available right now (the device may be offline).</string>
+    <string name="device_network">Network</string>
+    <string name="device_node_type">Device type</string>
+    <string name="device_ip">IP address</string>
+    <string name="device_mac">MAC address</string>
+    <string name="device_fabric_this">This Home Assistant</string>
+    <string name="device_model">Model</string>
+    <string name="device_firmware">Firmware</string>
+    <string name="device_hardware">Hardware</string>
+    <string name="device_serial">Serial number</string>
+    <string name="device_original_name">Original name</string>
+    <string name="device_node_id">Matter node ID</string>
+    <string name="device_open_in_ha">Open in Home Assistant</string>
+    <string name="net_thread">Thread</string>
+    <string name="net_wifi">Wi-Fi</string>
+    <string name="net_ethernet">Ethernet</string>
+    <string name="net_unknown">Unknown</string>
+    <string name="node_end_device">End device</string>
+    <string name="node_sleepy">Battery device (sleepy)</string>
+    <string name="node_router">Thread router</string>
+    <string name="node_bridge">Bridge</string>
+    <string name="share_hint_other_app">In the other app, choose “Add Matter device” and scan this code.</string>
+    <string name="devices_edit">Rename and room</string>
+    <string name="devices_name_hint">Leave empty to use \"%1$s\"</string>
+    <string name="devices_saved">Saved</string>
     <string name="devices_share">Share with another app</string>
     <string name="devices_remove">Remove</string>
     <string name="devices_remove_title">Remove %1$s?</string>

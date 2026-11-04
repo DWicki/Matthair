@@ -64,10 +64,12 @@ fun HomeScreen(
     onAdd: () -> Unit,
     onMultiAdmin: () -> Unit,
     onDevices: () -> Unit,
+    onOpenDevice: (deviceId: String) -> Unit,
     onSettings: () -> Unit,
 ) {
     val status by vm.status.collectAsState()
     val devices by vm.devices.collectAsState()
+    val areas by vm.areas.collectAsState()
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     LaunchedEffect(Unit) { vm.refresh() }
 
@@ -121,7 +123,9 @@ fun HomeScreen(
                         }
                     }
                 } else {
-                    items(devices.take(5), key = { it.device.id }) { row -> DeviceListItem(row, onClick = onDevices) }
+                    items(devices.take(5), key = { it.device.id }) { row ->
+                        DeviceListItem(row, areaName = areas.firstOrNull { it.id == row.device.areaId }?.name, onClick = { onOpenDevice(row.device.id) })
+                    }
                 }
             }
         }
@@ -166,7 +170,7 @@ private fun AddHero(onAdd: () -> Unit) {
 }
 
 @Composable
-fun DeviceListItem(row: DeviceRow, onClick: () -> Unit, trailing: (@Composable () -> Unit)? = null) {
+fun DeviceListItem(row: DeviceRow, onClick: () -> Unit, areaName: String? = null, trailing: (@Composable () -> Unit)? = null) {
     val c = LocalStatusColors.current
     Card(onClick = onClick, shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceContainer)) {
         ListItem(
@@ -181,7 +185,7 @@ fun DeviceListItem(row: DeviceRow, onClick: () -> Unit, trailing: (@Composable (
             headlineContent = { Text(row.device.displayName) },
             supportingContent = {
                 val parts = listOfNotNull(
-                    row.device.manufacturer, row.device.model,
+                    areaName, row.device.manufacturer, row.device.model,
                     row.available?.let { stringResource(if (it) R.string.device_online else R.string.device_offline) },
                 )
                 Text(parts.joinToString(" · "))
