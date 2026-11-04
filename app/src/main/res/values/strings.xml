@@ -129,7 +129,10 @@
     <string name="check_help_MATTER_APP">Install and start the Matter Server app (version 9 or newer) in Home Assistant.</string>
     <string name="check_help_BLE_PROXY_OPTION">The Matter Server app needs the option \"ble_proxy\" to use this phone.</string>
     <string name="check_multiple_candidates">%1$d devices match this manual code. Keep only the one you want to add in pairing mode, or scan the QR code instead.</string>
-    <string name="check_other_matter_devices">%1$d other Matter devices are in pairing mode nearby.</string>
+    <plurals name="check_other_matter_devices">
+        <item quantity="one">%1$d other Matter device is in pairing mode nearby.</item>
+        <item quantity="other">%1$d other Matter devices are in pairing mode nearby.</item>
+    </plurals>
     <string name="check_start">Add to Home Assistant</string>
     <string name="check_start_anyway">Add anyway</string>
     <string name="check_details">Technical details</string>

@@ -127,7 +127,10 @@
     <string name="check_help_MATTER_APP">Installiere und starte die Matter-Server-App (ab Version 9) in Home Assistant.</string>
     <string name="check_help_BLE_PROXY_OPTION">Damit die Matter-Server-App das Handy nutzen kann, braucht sie die Option „ble_proxy“.</string>
     <string name="check_multiple_candidates">%1$d Geräte passen zu diesem manuellen Code. Lass nur das gewünschte Gerät im Kopplungsmodus oder scanne stattdessen den QR-Code.</string>
-    <string name="check_other_matter_devices">%1$d andere Matter-Geräte in der Nähe sind im Kopplungsmodus.</string>
+    <plurals name="check_other_matter_devices">
+        <item quantity="one">%1$d anderes Matter-Gerät in der Nähe ist im Kopplungsmodus.</item>
+        <item quantity="other">%1$d andere Matter-Geräte in der Nähe sind im Kopplungsmodus.</item>
+    </plurals>
     <string name="check_start">Zu Home Assistant hinzufügen</string>
     <string name="check_start_anyway">Trotzdem hinzufügen</string>
     <string name="check_details">Technische Details</string>

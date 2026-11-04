@@ -52,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.dwicki.matthair.R
@@ -133,7 +134,7 @@ fun CheckScreen(vm: MainViewModel, onBack: () -> Unit, onStart: () -> Unit, onWi
                 item { Banner(stringResource(R.string.check_multiple_candidates, nearby.matching.size), BannerKind.WARN) }
             }
             if (nearby.matching.isEmpty() && nearby.others > 0 && !report.running) {
-                item { Banner(stringResource(R.string.check_other_matter_devices, nearby.others)) }
+                item { Banner(pluralStringResource(R.plurals.check_other_matter_devices, nearby.others, nearby.others)) }
             }
             item { CheckList(report.items, details, ::act) }
             if (details) {
