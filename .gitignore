@@ -6,3 +6,13 @@ build/
 .DS_Store
 /captures
 .kotlin/
+.externalNativeBuild/
+.cxx/
+*.log
+*.hprof
+*.apk
+*.aab
+
+# Signing keys must never be committed
+*.jks
+*.keystore
