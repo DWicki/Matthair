@@ -1,0 +1,1 @@
+Matter-Geräte zu Home Assistant hinzufügen, ohne Google-Dienste

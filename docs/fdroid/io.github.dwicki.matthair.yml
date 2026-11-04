@@ -1,0 +1,28 @@
+# Draft for https://gitlab.com/fdroid/fdroiddata (metadata/io.github.dwicki.matthair.yml)
+Categories:
+  - Connectivity
+  - Smart Home
+License: GPL-3.0-or-later
+AuthorName: DWicki
+WebSite: https://github.com/DWicki/Matthair
+SourceCode: https://github.com/DWicki/Matthair
+IssueTracker: https://github.com/DWicki/Matthair/issues
+Changelog: https://github.com/DWicki/Matthair/blob/HEAD/CHANGELOG.md
+
+AutoName: Matthair
+
+RepoType: git
+Repo: https://github.com/DWicki/Matthair.git
+
+Builds:
+  - versionName: 1.0.0
+    versionCode: 1
+    commit: v1.0.0
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 1.0.0
+CurrentVersionCode: 1

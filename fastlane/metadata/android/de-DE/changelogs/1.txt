@@ -1,0 +1,1 @@
+Erste Version: Matter-Geräte über das Bluetooth deines Handys mit Home Assistant koppeln, ohne Google-Dienste.

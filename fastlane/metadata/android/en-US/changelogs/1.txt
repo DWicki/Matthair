@@ -1,0 +1,1 @@
+First release: pair Matter devices with Home Assistant over your phone's Bluetooth, without Google services.

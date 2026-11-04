@@ -1,0 +1,1 @@
+Add Matter devices to Home Assistant, no Google services needed

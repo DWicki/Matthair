@@ -1,0 +1,24 @@
+Matthair fügt Matter-Geräte ohne Google Play Services zu Home Assistant hinzu (/e/OS, LineageOS, GrapheneOS und andere Android-Systeme ohne Google).
+
+Das Handy leiht Home Assistant nur sein Bluetooth. Das eigentliche Koppeln übernimmt der Matter Server über sein eingebautes Bluetooth-Proxy-Protokoll. Gerätezugangsdaten, WLAN-Passwort und Thread-Netzwerk laufen nie über das Handy.
+
+<b>Geräte hinzufügen</b>
+• Geführter Ablauf: Scannen, Prüfen, Koppeln, Benennen
+• QR-Code offline scannen, Code eintippen, Foto wählen oder NFC-Tag antippen
+• Ampel-Check mit Ein-Tipp-Lösungen vor dem Koppeln
+• WLAN-Zugangsdaten per WLAN-QR-Code
+• Live-Fortschritt, automatische Wiederholungen und verständliche Fehlermeldungen
+
+<b>Geräte verwalten</b>
+• Geräteliste mit Online-Status, Netzwerk, Firmware und Modell
+• Geräte umbenennen und Raum ändern
+• Ökosysteme ansehen und entfernen, z. B. eine alte Google-Verbindung
+• Gerät per QR-Code mit Apple Home, Alexa und anderen teilen
+
+<b>Voraussetzungen</b>
+• Android 12 oder neuer mit Bluetooth LE
+• Home Assistant 2026.6 oder neuer (HA OS oder Supervised) mit Matter-Server-App ab Version 9, Administrator-Konto
+
+Matthair spricht nur mit deinem eigenen Home Assistant. Keine Analyse, kein Tracking, keine Werbung.
+
+Matthair ist ein unabhängiges Projekt und steht in keiner Verbindung zur Connectivity Standards Alliance oder zur Open Home Foundation.
