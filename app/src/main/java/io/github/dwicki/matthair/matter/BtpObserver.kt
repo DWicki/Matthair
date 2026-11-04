@@ -1,5 +1,7 @@
 package io.github.dwicki.matthair.matter
 
+import java.io.ByteArrayOutputStream
+
 /**
  * Passive observer of the BTP (BLE Transport Protocol) stream that the phone relays between the
  * Matter server and the device. It never alters data. Its only purpose is to tell the user which
@@ -41,14 +43,21 @@ class BtpObserver(private val listener: (Event) -> Unit) {
 
     val isPaseDone: Boolean get() = paseDone
     val isPaseFailed: Boolean get() = paseFailed
-    var framesToDevice = 0; private set
-    var framesFromDevice = 0; private set
+    var framesToDevice = 0
+        private set
+    var framesFromDevice = 0
+        private set
 
     fun reset() {
         reassembly.values.forEach { it.reset() }
-        handshakeSeen = false; paseStarted = false; paseDone = false; paseFailed = false
-        largeDeviceMessages = 0; attestationSignalled = false
-        framesToDevice = 0; framesFromDevice = 0
+        handshakeSeen = false
+        paseStarted = false
+        paseDone = false
+        paseFailed = false
+        largeDeviceMessages = 0
+        attestationSignalled = false
+        framesToDevice = 0
+        framesFromDevice = 0
     }
 
     /** Feed one raw BTP frame. Never throws: malformed data is simply ignored. */
@@ -67,97 +76,122 @@ class BtpObserver(private val listener: (Event) -> Unit) {
             }
             return
         }
-        var idx = 1
-        if (flags and FLAG_MANAGEMENT != 0) idx++ // management opcode
-        if (flags and FLAG_ACK != 0) idx++ // ack number
-        idx++ // sequence number
-        if (idx > frame.size) return
-        val r = reassembly.getValue(direction)
+        var index = 1
+        if (flags and FLAG_MANAGEMENT != 0) index++ // management opcode
+        if (flags and FLAG_ACK != 0) index++ // ack number
+        index++ // sequence number
+        if (index > frame.size) return
+        val reassembler = reassembly.getValue(direction)
         if (flags and FLAG_BEGIN != 0) {
-            if (idx + 2 > frame.size) return
-            idx += 2 // message length (LE16); we reassemble by END flag instead
-            r.begin()
+            if (index + 2 > frame.size) return
+            index += 2 // message length; we rely on the END flag instead
+            reassembler.begin()
         }
-        if (!r.active) return
-        r.append(frame, idx)
-        if (flags and FLAG_END != 0) {
-            val message = r.finish()
-            onMessage(direction, message)
+        if (!reassembler.active) return
+        reassembler.append(frame, index)
+        if (flags and FLAG_END != 0) onMessage(direction, reassembler.finish())
+    }
+
+    private fun onMessage(direction: Direction, message: ByteArray) {
+        if (message.size < 8) return
+        val sessionId = message.le16(1)
+        if (sessionId != 0) onEncryptedMessage(direction, message) else onUnsecuredMessage(message)
+    }
+
+    /** The first message with a session id means PASE succeeded; everything after it is opaque. */
+    private fun onEncryptedMessage(direction: Direction, message: ByteArray) {
+        if (!paseDone && !paseFailed) {
+            paseDone = true
+            listener(Event.PaseSucceeded)
+        }
+        if (direction != Direction.FROM_DEVICE || message.size < LARGE_MESSAGE_BYTES) return
+        // The DAC and PAI certificates and the attestation response are the three large
+        // messages a device sends right after PASE.
+        largeDeviceMessages++
+        if (largeDeviceMessages >= 3 && !attestationSignalled) {
+            attestationSignalled = true
+            listener(Event.AttestationLikelyDone)
         }
     }
 
-    private fun onMessage(direction: Direction, msg: ByteArray) {
-        if (msg.size < 8) return
-        val sessionId = (msg[1].toInt() and 0xFF) or ((msg[2].toInt() and 0xFF) shl 8)
-
-        if (sessionId != 0) {
-            if (!paseDone && !paseFailed) {
-                paseDone = true
-                listener(Event.PaseSucceeded)
-            }
-            if (direction == Direction.FROM_DEVICE && msg.size >= LARGE_MESSAGE_BYTES) {
-                largeDeviceMessages++
-                // DAC + PAI certificate responses and the attestation response are the three
-                // large messages a device sends right after PASE.
-                if (largeDeviceMessages >= 3 && !attestationSignalled) {
-                    attestationSignalled = true
-                    listener(Event.AttestationLikelyDone)
-                }
-            }
-            return
-        }
-
-        // Unsecured message: parse message header to find the protocol header.
-        val msgFlags = msg[0].toInt() and 0xFF
-        var idx = 8 // flags(1) + session id(2) + security flags(1) + counter(4)
-        if (msgFlags and 0x04 != 0) idx += 8 // source node id
-        when (msgFlags and 0x03) {
-            1 -> idx += 8
-            2 -> idx += 2
-        }
-        if (idx + 6 > msg.size) return
-        val exchangeFlags = msg[idx].toInt() and 0xFF
-        val opcode = msg[idx + 1].toInt() and 0xFF
-        var p = idx + 4 // exchange flags, opcode, exchange id(2)
-        if (exchangeFlags and 0x10 != 0) p += 2 // vendor id
-        if (p + 2 > msg.size) return
-        val protocolId = (msg[p].toInt() and 0xFF) or ((msg[p + 1].toInt() and 0xFF) shl 8)
-        p += 2
-        if (exchangeFlags and 0x02 != 0) p += 4 // acknowledged message counter
-        if (exchangeFlags and 0x08 != 0 && p + 2 <= msg.size) {
-            val extLen = (msg[p].toInt() and 0xFF) or ((msg[p + 1].toInt() and 0xFF) shl 8)
-            p += 2 + extLen
-        }
-        if (protocolId != PROTOCOL_SECURE_CHANNEL) return
-
-        when (opcode) {
+    private fun onUnsecuredMessage(message: ByteArray) {
+        val header = ProtocolHeader.parse(message) ?: return
+        if (header.protocolId != PROTOCOL_SECURE_CHANNEL) return
+        when (header.opcode) {
             OP_PBKDF_PARAM_REQUEST, OP_PAKE1 -> if (!paseStarted) {
                 paseStarted = true
                 listener(Event.PaseStarted)
             }
-            OP_STATUS_REPORT -> if (p + 8 <= msg.size) {
-                val general = (msg[p].toInt() and 0xFF) or ((msg[p + 1].toInt() and 0xFF) shl 8)
-                val protoCode = (msg[p + 6].toInt() and 0xFF) or ((msg[p + 7].toInt() and 0xFF) shl 8)
-                if (paseStarted && !paseDone) {
-                    if (general == 0 && protoCode == 0) {
-                        paseDone = true
-                        listener(Event.PaseSucceeded)
-                    } else {
-                        paseFailed = true
-                        listener(Event.PaseFailed(general, protoCode))
-                    }
+            OP_STATUS_REPORT -> onStatusReport(message, header.payloadOffset)
+        }
+    }
+
+    /** StatusReport: general code (2 bytes), protocol id (4), protocol code (2). 0/0 means success. */
+    private fun onStatusReport(message: ByteArray, offset: Int) {
+        if (offset + 8 > message.size || !paseStarted || paseDone) return
+        val generalCode = message.le16(offset)
+        val protocolCode = message.le16(offset + 6)
+        if (generalCode == 0 && protocolCode == 0) {
+            paseDone = true
+            listener(Event.PaseSucceeded)
+        } else {
+            paseFailed = true
+            listener(Event.PaseFailed(generalCode, protocolCode))
+        }
+    }
+
+    /** The parts of an unsecured Matter message header we need. */
+    private class ProtocolHeader(val opcode: Int, val protocolId: Int, val payloadOffset: Int) {
+        companion object {
+            fun parse(message: ByteArray): ProtocolHeader? {
+                // Message header: flags(1), session id(2), security flags(1), counter(4), optional node ids.
+                val messageFlags = message[0].toInt() and 0xFF
+                var index = 8
+                if (messageFlags and 0x04 != 0) index += 8 // source node id
+                when (messageFlags and 0x03) {
+                    1 -> index += 8 // destination node id
+                    2 -> index += 2 // destination group id
                 }
+                // Protocol header: exchange flags(1), opcode(1), exchange id(2), [vendor id(2)], protocol id(2), ...
+                if (index + 6 > message.size) return null
+                val exchangeFlags = message[index].toInt() and 0xFF
+                val opcode = message[index + 1].toInt() and 0xFF
+                index += 4
+                if (exchangeFlags and 0x10 != 0) index += 2 // vendor id
+                if (index + 2 > message.size) return null
+                val protocolId = message.le16(index)
+                index += 2
+                if (exchangeFlags and 0x02 != 0) index += 4 // acknowledged message counter
+                if (exchangeFlags and 0x08 != 0 && index + 2 <= message.size) index += 2 + message.le16(index) // extensions
+                return ProtocolHeader(opcode, protocolId, index)
             }
         }
     }
 
+    /** Joins BTP segments into one Matter message, from the BEGIN flag to the END flag. */
     private class Reassembler {
-        private var buffer = java.io.ByteArrayOutputStream()
-        var active = false; private set
-        fun begin() { buffer = java.io.ByteArrayOutputStream(); active = true }
-        fun append(src: ByteArray, from: Int) { if (from < src.size) buffer.write(src, from, src.size - from) }
-        fun finish(): ByteArray { active = false; return buffer.toByteArray() }
-        fun reset() { active = false; buffer = java.io.ByteArrayOutputStream() }
+        private var buffer = ByteArrayOutputStream()
+        var active = false
+            private set
+
+        fun begin() {
+            buffer = ByteArrayOutputStream()
+            active = true
+        }
+
+        fun append(source: ByteArray, from: Int) {
+            if (from < source.size) buffer.write(source, from, source.size - from)
+        }
+
+        fun finish(): ByteArray {
+            active = false
+            return buffer.toByteArray()
+        }
+
+        fun reset() {
+            active = false
+            buffer = ByteArrayOutputStream()
+        }
     }
 
     companion object {
@@ -179,3 +213,7 @@ class BtpObserver(private val listener: (Event) -> Unit) {
         private const val LARGE_MESSAGE_BYTES = 400
     }
 }
+
+/** Little-endian unsigned 16-bit value at [offset]. */
+private fun ByteArray.le16(offset: Int): Int =
+    (this[offset].toInt() and 0xFF) or ((this[offset + 1].toInt() and 0xFF) shl 8)
