@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="128" height="128">
+  <title>Matthair</title>
+  <rect width="108" height="108" rx="26" fill="#1B4FD8"/>
+  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">
+    <path stroke-width="4.5" d="M34,71 L34,53 Q34,49 37.5,45.5 L50.5,32.5 Q54,29 57.5,32.5 L70.5,45.5 Q74,49 74,53 L74,71 Q74,76 69,76 L39,76 Q34,76 34,71 Z"/>
+    <path stroke-width="3.2" d="M54,48 L44,64.5 M54,48 L64,64.5 M44,64.5 L64,64.5"/>
+  </g>
+  <g fill="#fff">
+    <circle cx="54" cy="48" r="5"/>
+    <circle cx="44" cy="64.5" r="5"/>
+    <circle cx="64" cy="64.5" r="5"/>
+  </g>
+</svg>
