@@ -29,6 +29,8 @@
     <string name="server_external_hint">Wird genutzt, wenn du nicht zu Hause bist</string>
     <string name="server_http_warning">Diese Adresse ist unverschlüsselt. Im Heimnetz ist das üblich, für den Zugriff von außen solltest du HTTPS nutzen.</string>
     <string name="server_invalid_url">Gib eine vollständige Adresse mit http:// oder https:// ein</string>
+    <string name="server_unreachable">Unter dieser Adresse wurde kein Home Assistant gefunden. Ebenfalls versucht:\n%1$s\n\nPrüfe die Adresse und ob das Handy im selben Netz ist.</string>
+    <string name="server_corrected">Home Assistant gefunden unter %1$s</string>
     <string name="auth_title">Anmelden</string>
     <string name="auth_oauth">Mit Home Assistant anmelden</string>
     <string name="auth_oauth_desc">Empfohlen. Dein Passwort gibst du nur auf deiner eigenen Home-Assistant-Seite ein.</string>
@@ -51,6 +53,7 @@
     <string name="home_no_devices">Noch keine Matter-Geräte</string>
     <string name="home_status_connected">Verbunden mit Home Assistant %1$s</string>
     <string name="home_status_offline">Home Assistant ist nicht erreichbar</string>
+    <string name="home_status_signed_out">Nicht angemeldet</string>
     <string name="home_status_connecting">Verbinde…</string>
     <string name="home_more_devices">Alle anzeigen (%1$d)</string>
     <string name="home_from_other_app">Aus anderer App übernehmen</string>

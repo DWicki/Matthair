@@ -32,6 +32,8 @@ sealed interface HaStatus {
     data object Connecting : HaStatus
     data class Connected(val version: String) : HaStatus
     data class Offline(val reason: String?) : HaStatus
+    /** Server configured, but no (valid) credentials: the user must sign in. */
+    data object SignedOut : HaStatus
 }
 
 data class DeviceRow(val device: HaDevice, val available: Boolean?)
@@ -77,6 +79,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun consumeResult() { _result.value = null }
 
+    /** Decided once at start-up; see MainActivity. */
+    val isSignedIn: Boolean get() = c.config.isSignedIn
+
     // --- Onboarding --------------------------------------------------------------------------
 
     /** Certificate the user must confirm before we continue (self-signed HA). */
@@ -85,14 +90,53 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _certPrompt = MutableStateFlow<CertPrompt?>(null)
     val certPrompt: StateFlow<CertPrompt?> = _certPrompt.asStateFlow()
 
-    /** Validate the URL and check TLS; returns true when the user can go on to sign in. */
+    /** Problem shown inline on the server screen; null when there is none. */
+    sealed interface ServerProblem {
+        data class Unreachable(val tried: List<String>) : ServerProblem
+    }
+
+    private val _serverProblem = MutableStateFlow<ServerProblem?>(null)
+    val serverProblem: StateFlow<ServerProblem?> = _serverProblem.asStateFlow()
+
+    /** Set when the URL that works differs from what the user typed (shown as info). */
+    private val _correctedUrl = MutableStateFlow<String?>(null)
+    val correctedUrl: StateFlow<String?> = _correctedUrl.asStateFlow()
+
+    fun clearServerProblem() { _serverProblem.value = null }
+
+    /**
+     * Validate the address before going on to sign in. If the address as typed does not answer
+     * like Home Assistant, the usual variants are tried (http/https, port 8123), because
+     * "https://<ip>" for a plain-HTTP HA on port 80/8123 is a very common mix-up.
+     */
     fun submitServer(local: String, external: String?, onReady: () -> Unit) = viewModelScope.launch {
         _busy.value = true
-        val cfg = ServerConfig(normalizeUrl(local), external?.takeIf { it.isNotBlank() }?.let(::normalizeUrl), AuthMethod.OAUTH, null)
-        val tlsProblem = withContext(Dispatchers.IO) { probeTls(cfg.localUrl) }
+        _serverProblem.value = null
+        _correctedUrl.value = null
+        val typed = normalizeUrl(local)
+        val candidates = urlCandidates(typed)
+        var found: String? = null
+        var tlsPin: String? = null
+        withContext(Dispatchers.IO) {
+            for (url in candidates) {
+                when (val r = probe(url)) {
+                    is Probe.Ok -> { found = url; break }
+                    is Probe.UntrustedCert -> { found = url; tlsPin = r.sha256; break }
+                    Probe.NotHa -> Unit
+                }
+            }
+        }
         _busy.value = false
-        if (tlsProblem != null) {
-            _certPrompt.value = CertPrompt(tlsProblem, cfg)
+        val url = found
+        if (url == null) {
+            _serverProblem.value = ServerProblem.Unreachable(candidates)
+            return@launch
+        }
+        if (url != typed) _correctedUrl.value = url
+        val cfg = ServerConfig(url, external?.takeIf { it.isNotBlank() }?.let(::normalizeUrl), AuthMethod.OAUTH, null)
+        val pin = tlsPin
+        if (pin != null) {
+            _certPrompt.value = CertPrompt(pin, cfg)
         } else {
             c.config.save(cfg)
             onReady()
@@ -108,17 +152,30 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun dismissCert() { _certPrompt.value = null }
 
-    /** Returns the leaf fingerprint if HTTPS fails with a TLS error, else null. */
-    private fun probeTls(url: String): String? {
-        if (!url.startsWith("https", true)) return null
-        val ok = runCatching {
-            HttpClients.create(null).newCall(okhttp3.Request.Builder().url("$url/manifest.json").build()).execute().close()
+    private sealed interface Probe {
+        data object Ok : Probe
+        data class UntrustedCert(val sha256: String) : Probe
+        data object NotHa : Probe
+    }
+
+    /** Does [url] serve Home Assistant? HA's `/manifest.json` names itself "Home Assistant". */
+    private fun probe(url: String): Probe {
+        val client = HttpClients.create(null).newBuilder()
+            .connectTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(4, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+        return try {
+            client.newCall(okhttp3.Request.Builder().url("$url/manifest.json").build()).execute().use { r ->
+                if (r.isSuccessful && r.body?.string().orEmpty().contains("Home Assistant")) Probe.Ok else Probe.NotHa
+            }
+        } catch (e: SSLException) {
+            val uri = URI(url)
+            HttpClients.fetchServerCertificate(uri.host, if (uri.port > 0) uri.port else 443)
+                ?.let { Probe.UntrustedCert(HttpClients.sha256(it)) } ?: Probe.NotHa
+        } catch (e: Exception) {
+            AppLog.i("ViewModel", "Probe $url failed: ${e.javaClass.simpleName}")
+            Probe.NotHa
         }
-        val err = ok.exceptionOrNull() ?: return null
-        if (err !is SSLException) return null
-        val uri = URI(url)
-        val cert = HttpClients.fetchServerCertificate(uri.host, if (uri.port > 0) uri.port else 443) ?: return null
-        return HttpClients.sha256(cert)
     }
 
     fun authorizeUrl(state: String): String = HaAuth.authorizeUrl(c.config.config.value!!.localUrl, state)
@@ -186,7 +243,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
         } catch (e: Exception) {
             AppLog.w("ViewModel", "Refresh failed", e)
-            _status.value = HaStatus.Offline(e.message)
+            val code = (e as? app.matterpair.ha.HaException)?.code
+            _status.value = if (code == "no_token" || code == "auth_invalid" || code == "auth_failed") HaStatus.SignedOut
+            else HaStatus.Offline(e.message)
         }
     }
 
@@ -312,6 +371,27 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     companion object {
+        /** The typed URL first, then http/https × (default port, 8123) variants. */
+        fun urlCandidates(typed: String): List<String> {
+            val uri = URI(typed)
+            val host = uri.host ?: return listOf(typed)
+            val hostPart = if (host.contains(':')) "[$host]" else host
+            val path = (uri.rawPath ?: "").trimEnd('/')
+            val variants = buildList {
+                add(typed)
+                if (uri.port == -1) {
+                    for (scheme in listOf("http", "https")) {
+                        add("$scheme://$hostPart:8123$path")
+                        add("$scheme://$hostPart$path")
+                    }
+                } else {
+                    val other = if (uri.scheme.equals("https", true)) "http" else "https"
+                    add("$other://$hostPart:${uri.port}$path")
+                }
+            }
+            return variants.distinct()
+        }
+
         fun normalizeUrl(input: String): String {
             var s = input.trim().trimEnd('/')
             if (!s.startsWith("http://", true) && !s.startsWith("https://", true)) s = "http://$s"

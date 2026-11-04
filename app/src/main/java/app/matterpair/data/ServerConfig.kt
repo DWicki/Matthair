@@ -75,6 +75,16 @@ class ConfigRepository(context: Context) {
         get() = prefs.getBoolean(KEY_DETAILS, false)
         set(v) = prefs.edit().putBoolean(KEY_DETAILS, v).apply()
 
+    /** True when a server is configured *and* credentials for it exist. */
+    val isSignedIn: Boolean
+        get() {
+            val cfg = _config.value ?: return false
+            return when (cfg.authMethod) {
+                AuthMethod.OAUTH -> oauthTokens != null
+                AuthMethod.LONG_LIVED_TOKEN -> longLivedToken != null
+            }
+        }
+
     fun signOut() {
         secure.clear()
         prefs.edit().clear().apply()

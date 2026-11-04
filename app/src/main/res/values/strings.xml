@@ -31,6 +31,8 @@
     <string name="server_external_hint">Used when you are not at home</string>
     <string name="server_http_warning">This address is not encrypted. That is common inside your home network, but use HTTPS for external access.</string>
     <string name="server_invalid_url">Enter a full address starting with http:// or https://</string>
+    <string name="server_unreachable">No Home Assistant found at this address. Also tried:\n%1$s\n\nCheck the address and that the phone is on the same network.</string>
+    <string name="server_corrected">Found Home Assistant at %1$s</string>
     <string name="auth_title">Sign in</string>
     <string name="auth_oauth">Sign in with Home Assistant</string>
     <string name="auth_oauth_desc">Recommended. Your password is only entered on your own Home Assistant page.</string>
@@ -53,6 +55,7 @@
     <string name="home_no_devices">No Matter devices yet</string>
     <string name="home_status_connected">Connected to Home Assistant %1$s</string>
     <string name="home_status_offline">Home Assistant is not reachable</string>
+    <string name="home_status_signed_out">Not signed in</string>
     <string name="home_status_connecting">Connecting…</string>
     <string name="home_more_devices">Show all (%1$d)</string>
     <string name="home_from_other_app">Add from another app</string>
@@ -67,7 +70,7 @@
     <string name="step_name">Finish</string>
     <string name="scan_title">Scan the setup code</string>
     <string name="scan_hint">Find the Matter QR code on the device, its packaging or manual</string>
-    <string name="scan_manual">Enter code instead</string>
+    <string name="scan_manual">Enter code</string>
     <string name="scan_from_photo">From photo</string>
     <string name="scan_nfc_hint">You can also hold an NFC tag to the phone</string>
     <string name="scan_camera_denied">Camera access is needed to scan. You can also type the code.</string>

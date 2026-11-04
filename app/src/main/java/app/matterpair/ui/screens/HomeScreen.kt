@@ -135,6 +135,7 @@ private fun StatusChip(status: HaStatus) {
         HaStatus.Connecting -> stringResource(R.string.home_status_connecting) to MaterialTheme.colorScheme.outline
         is HaStatus.Connected -> stringResource(R.string.home_status_connected, status.version) to c.ok
         is HaStatus.Offline -> stringResource(R.string.home_status_offline) to c.fail
+        HaStatus.SignedOut -> stringResource(R.string.home_status_signed_out) to c.warn
     }
     AssistChip(
         onClick = {},

@@ -114,6 +114,7 @@ fun ServerScreen(vm: MainViewModel, onBack: () -> Unit, onReady: () -> Unit) {
     var touched by rememberSaveable { mutableStateOf(false) }
     val busy by vm.busy.collectAsState()
     val cert by vm.certPrompt.collectAsState()
+    val problem by vm.serverProblem.collectAsState()
     val valid = MainViewModel.isValidUrl(local)
 
     Scaffold(topBar = {
@@ -123,7 +124,7 @@ fun ServerScreen(vm: MainViewModel, onBack: () -> Unit, onReady: () -> Unit) {
             Text(stringResource(R.string.server_title), style = MaterialTheme.typography.headlineMedium)
             Spacer(Modifier.height(24.dp))
             OutlinedTextField(
-                local, { local = it; touched = true },
+                local, { local = it; touched = true; vm.clearServerProblem() },
                 label = { Text(stringResource(R.string.server_local_label)) },
                 placeholder = { Text(stringResource(R.string.server_local_hint)) },
                 singleLine = true,
@@ -141,6 +142,10 @@ fun ServerScreen(vm: MainViewModel, onBack: () -> Unit, onReady: () -> Unit) {
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
                 modifier = Modifier.fillMaxWidth(),
             )
+            (problem as? MainViewModel.ServerProblem.Unreachable)?.let { p ->
+                Spacer(Modifier.height(16.dp))
+                Banner(stringResource(R.string.server_unreachable, p.tried.drop(1).joinToString("\n")), BannerKind.ERROR)
+            }
             if (valid && MainViewModel.normalizeUrl(local).startsWith("http://")) {
                 Spacer(Modifier.height(16.dp))
                 Banner(stringResource(R.string.server_http_warning), BannerKind.INFO)
@@ -173,12 +178,15 @@ fun AuthScreen(vm: MainViewModel, onBack: () -> Unit, onOAuth: () -> Unit, onSig
     var showToken by rememberSaveable { mutableStateOf(false) }
     var token by remember { mutableStateOf("") }
     val busy by vm.busy.collectAsState()
+    val corrected by vm.correctedUrl.collectAsState()
 
     Scaffold(topBar = {
         TopAppBar(title = {}, navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back)) } })
     }) { pad ->
         Column(Modifier.padding(pad).padding(horizontal = 24.dp).fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
             Text(stringResource(R.string.auth_title), style = MaterialTheme.typography.headlineMedium)
+            Text(vm.config.collectAsState().value?.localUrl.orEmpty(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            corrected?.let { Spacer(Modifier.height(12.dp)); Banner(stringResource(R.string.server_corrected, it)) }
             Spacer(Modifier.height(24.dp))
             AuthOption(Icons.Rounded.Login, stringResource(R.string.auth_oauth), stringResource(R.string.auth_oauth_desc), highlighted = true, onClick = onOAuth)
             Spacer(Modifier.height(12.dp))

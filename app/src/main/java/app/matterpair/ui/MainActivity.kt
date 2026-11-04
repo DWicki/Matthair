@@ -126,7 +126,18 @@ class MainActivity : ComponentActivity() {
     @androidx.compose.runtime.Composable
     private fun App() {
         val navController = rememberNavController().also { nav = it }
-        val config by vm.config.collectAsState()
+        val startRoute = remember {
+            when {
+                vm.config.value == null -> Routes.WELCOME
+                !vm.isSignedIn -> Routes.AUTH
+                else -> Routes.HOME
+            }
+        }
+        val status by vm.status.collectAsState()
+        // Token missing or revoked (e.g. deleted in HA): send the user to sign in again.
+        LaunchedEffect(status) {
+            if (status == HaStatus.SignedOut) navController.navigate(Routes.AUTH) { popUpTo(0) }
+        }
         val result by vm.result.collectAsState()
         val snackbar = remember { SnackbarHostState() }
         val ctx = LocalContext.current
@@ -143,7 +154,8 @@ class MainActivity : ComponentActivity() {
         Box(Modifier.fillMaxSize()) {
             NavHost(
                 navController,
-                startDestination = if (config == null) Routes.WELCOME else Routes.HOME,
+                // Computed once: saving the server URL must not jump past the sign-in screen.
+                startDestination = startRoute,
                 enterTransition = { slideInHorizontally { it / 4 } + fadeIn() },
                 exitTransition = { fadeOut() },
                 popEnterTransition = { fadeIn() },
@@ -155,7 +167,8 @@ class MainActivity : ComponentActivity() {
                 }
                 composable(Routes.AUTH) {
                     AuthScreen(
-                        vm, onBack = { navController.popBackStack() },
+                        // AUTH can be the start screen (signed out); "back" then means "change server".
+                        vm, onBack = { if (!navController.popBackStack()) navController.navigate(Routes.SERVER) },
                         onOAuth = { navController.navigate(Routes.OAUTH) },
                         onSignedIn = { navController.goHome() },
                     )
