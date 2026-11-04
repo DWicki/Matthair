@@ -210,6 +210,7 @@
     <string name="devices_title">Matter devices</string>
     <string name="device_action_edit">Rename</string>
     <string name="device_action_share">Share</string>
+    <string name="device_action_open">In HA</string>
     <string name="device_section_connection">Connection</string>
     <string name="device_section_ecosystems">Connected ecosystems</string>
     <string name="device_section_info">Device</string>

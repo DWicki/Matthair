@@ -208,6 +208,7 @@
     <string name="devices_title">Matter-Geräte</string>
     <string name="device_action_edit">Umbenennen</string>
     <string name="device_action_share">Teilen</string>
+    <string name="device_action_open">In HA</string>
     <string name="device_section_connection">Verbindung</string>
     <string name="device_section_ecosystems">Verbundene Systeme</string>
     <string name="device_section_info">Gerät</string>

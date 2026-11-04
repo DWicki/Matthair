@@ -2,9 +2,12 @@ package app.matterpair.ui.screens
 
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,20 +19,30 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.Badge
+import androidx.compose.material.icons.rounded.Business
+import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Hub
+import androidx.compose.material.icons.rounded.Lan
+import androidx.compose.material.icons.rounded.Memory
+import androidx.compose.material.icons.rounded.MeetingRoom
+import androidx.compose.material.icons.rounded.Numbers
+import androidx.compose.material.icons.rounded.Router
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.SystemUpdate
+import androidx.compose.material.icons.rounded.Tag
+import androidx.compose.material.icons.rounded.Wifi
+import androidx.compose.material.icons.rounded.Workspaces
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,9 +51,11 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -52,10 +67,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import app.matterpair.R
@@ -65,17 +84,22 @@ import app.matterpair.matter.SetupPayloadParser
 import app.matterpair.matter.hex
 import app.matterpair.ui.MainViewModel
 import app.matterpair.ui.components.Banner
-import app.matterpair.ui.components.HeroIcon
 import app.matterpair.ui.components.PrimaryButton
 import app.matterpair.ui.components.QrImage
 import app.matterpair.ui.components.RoomPicker
 import app.matterpair.ui.theme.LocalStatusColors
 
 /**
- * Overview of one Matter device: status, connection, device info and the ecosystems (fabrics)
- * it belongs to, with all actions in one place: rename/room, share, open in HA, remove.
+ * Overview of one Matter device, in the style of a smart-home app device page:
+ *  * a tinted header card (icon, name, chips for room / status / network),
+ *  * round quick actions (rename, share, open in HA),
+ *  * grouped info cards with compact two-line rows (icon, small label, value),
+ *  * remove at the bottom.
+ *
+ * Rows stack label above value instead of side by side, so long values (IPv6 addresses, model
+ * names) can never squeeze the label away.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun DeviceScreen(vm: MainViewModel, deviceId: String, onBack: () -> Unit) {
     val rows by vm.devices.collectAsState()
@@ -89,13 +113,15 @@ fun DeviceScreen(vm: MainViewModel, deviceId: String, onBack: () -> Unit) {
     var shared by remember { mutableStateOf<Pair<String, String>?>(null) }
     LaunchedEffect(deviceId) { vm.loadDetail(deviceId) }
 
-    Scaffold(topBar = {
-        TopAppBar(
-            title = {},
-            navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back)) } },
-            actions = { IconButton({ edit = true }, enabled = row != null) { Icon(Icons.Rounded.Edit, stringResource(R.string.devices_edit)) } },
-        )
-    }) { pad ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {},
+                navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.action_back)) } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+            )
+        },
+    ) { pad ->
         if (row == null) {
             Box(Modifier.padding(pad).fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             return@Scaffold
@@ -103,103 +129,147 @@ fun DeviceScreen(vm: MainViewModel, deviceId: String, onBack: () -> Unit) {
         val d = row.device
         val diag = detail?.diagnostics
         val online = diag?.available ?: row.available
-        val c = LocalStatusColors.current
+        val status = LocalStatusColors.current
         val area = areas.firstOrNull { it.id == d.areaId }?.name
 
         LazyColumn(
             Modifier.padding(pad).fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // --- Header ---------------------------------------------------------------------
+            // --- Header card -----------------------------------------------------------------
             item {
-                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    HeroIcon(Icons.Rounded.Hub, size = 112.dp, tint = if (online == false) c.fail else MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.height(12.dp))
-                    Text(d.displayName, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
-                    Text(
-                        area ?: stringResource(R.string.done_no_area),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    if (online != null) {
+                val pc = MaterialTheme.colorScheme.primaryContainer
+                Surface(shape = MaterialTheme.shapes.extraLarge, color = Color.Transparent, modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        Modifier
+                            .background(Brush.verticalGradient(listOf(pc, pc.copy(alpha = 0.55f))))
+                            .padding(20.dp),
+                    ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(10.dp).clip(CircleShape).background(if (online) c.ok else c.fail))
-                            Spacer(Modifier.width(6.dp))
-                            Text(stringResource(if (online) R.string.device_online else R.string.device_offline), style = MaterialTheme.typography.labelLarge)
+                            Box(
+                                Modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
+                                contentAlignment = Alignment.Center,
+                            ) { Icon(Icons.Rounded.Hub, null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(34.dp)) }
+                            Spacer(Modifier.width(16.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    d.displayName,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    maxLines = 2, overflow = TextOverflow.Ellipsis,
+                                )
+                                listOfNotNull(d.manufacturer, d.model).takeIf { it.isNotEmpty() }?.let {
+                                    Text(
+                                        it.joinToString(" · "),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (online != null) {
+                                StatusPill(
+                                    stringResource(if (online) R.string.device_online else R.string.device_offline),
+                                    dot = if (online) status.ok else status.fail,
+                                )
+                            }
+                            StatusPill(area ?: stringResource(R.string.done_no_area), icon = Icons.Rounded.MeetingRoom, onClick = { edit = true })
+                            diag?.let { StatusPill(networkLabel(it.networkType), icon = networkIcon(it.networkType)) }
                         }
                     }
                 }
             }
-            // --- Quick actions ---------------------------------------------------------------
+
+            // --- Quick actions -----------------------------------------------------------------
             item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilledTonalButton({ edit = true }, Modifier.weight(1f)) {
-                        Icon(Icons.Rounded.Edit, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.device_action_edit))
-                    }
-                    FilledTonalButton({ vm.shareDevice(d) { m, q -> shared = m to q } }, Modifier.weight(1f)) {
-                        Icon(Icons.Rounded.Share, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.device_action_share))
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    QuickAction(Icons.Rounded.Edit, stringResource(R.string.device_action_edit)) { edit = true }
+                    QuickAction(Icons.Rounded.Share, stringResource(R.string.device_action_share)) { vm.shareDevice(d) { m, q -> shared = m to q } }
+                    vm.haDeviceUrl(d.id)?.let { url ->
+                        QuickAction(Icons.AutoMirrored.Rounded.OpenInNew, stringResource(R.string.device_action_open)) {
+                            runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) }
+                        }
                     }
                 }
             }
-            // --- Connection ------------------------------------------------------------------
+
+            // --- Connection --------------------------------------------------------------------
             item {
-                InfoCard(stringResource(R.string.device_section_connection)) {
+                Section(stringResource(R.string.device_section_connection)) {
                     when {
-                        detail == null -> Row(verticalAlignment = Alignment.CenterVertically) {
+                        detail == null -> Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                            Spacer(Modifier.width(12.dp)); Text(stringResource(R.string.loading))
+                            Spacer(Modifier.width(12.dp))
+                            Text(stringResource(R.string.loading), style = MaterialTheme.typography.bodyMedium)
                         }
-                        diag == null -> Text(stringResource(R.string.device_diag_unavailable), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        diag == null -> Text(
+                            stringResource(R.string.device_diag_unavailable),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(16.dp),
+                        )
                         else -> {
-                            InfoRow(stringResource(R.string.device_network), networkLabel(diag.networkType) + (diag.networkName?.let { " · $it" } ?: ""))
-                            InfoRow(stringResource(R.string.device_node_type), nodeTypeLabel(diag.nodeType))
-                            diag.ipAddresses.firstOrNull()?.let { InfoRow(stringResource(R.string.device_ip), if (showDetails) diag.ipAddresses.joinToString("\n") else it) }
-                            if (showDetails) diag.macAddress?.let { InfoRow(stringResource(R.string.device_mac), it) }
+                            val items = buildList<Triple<ImageVector, String, String>> {
+                                add(Triple(networkIcon(diag.networkType), stringResource(R.string.device_network),
+                                    networkLabel(diag.networkType) + (diag.networkName?.let { " · $it" } ?: "")))
+                                add(Triple(Icons.Rounded.Router, stringResource(R.string.device_node_type), nodeTypeLabel(diag.nodeType)))
+                                if (diag.ipAddresses.isNotEmpty()) {
+                                    add(Triple(Icons.Rounded.Lan, stringResource(R.string.device_ip),
+                                        if (showDetails) diag.ipAddresses.joinToString("\n") else diag.ipAddresses.first()))
+                                }
+                                if (showDetails) diag.macAddress?.let { add(Triple(Icons.Rounded.Tag, stringResource(R.string.device_mac), it)) }
+                            }
+                            Rows(items)
                         }
                     }
                 }
             }
-            // --- Ecosystems (multi-admin) ----------------------------------------------------
+
+            // --- Ecosystems ----------------------------------------------------------------------
             if (diag != null && diag.fabrics.isNotEmpty()) {
                 item {
-                    InfoCard(stringResource(R.string.device_section_ecosystems)) {
-                        diag.fabrics.forEach { f ->
+                    Section(stringResource(R.string.device_section_ecosystems)) {
+                        Rows(diag.fabrics.map { f ->
                             val own = f.fabricIndex == diag.ownFabricIndex
-                            InfoRow(
+                            Triple(
+                                Icons.Rounded.Workspaces,
+                                if (own) stringResource(R.string.device_fabric_this) else (f.label ?: f.vendorId.hex()),
                                 f.vendorName ?: f.label ?: f.vendorId.hex(),
-                                if (own) stringResource(R.string.device_fabric_this) else (f.label ?: ""),
                             )
-                        }
+                        })
                     }
                 }
             }
-            // --- Device info -----------------------------------------------------------------
+
+            // --- Device info ---------------------------------------------------------------------
             item {
-                InfoCard(stringResource(R.string.device_section_info)) {
-                    d.manufacturer?.let { InfoRow(stringResource(R.string.device_vendor), it) }
-                    d.model?.let { InfoRow(stringResource(R.string.device_model), it) }
-                    d.swVersion?.let { InfoRow(stringResource(R.string.device_firmware), it) }
-                    d.hwVersion?.let { InfoRow(stringResource(R.string.device_hardware), it) }
-                    d.serialNumber?.let { InfoRow(stringResource(R.string.device_serial), it) }
-                    if (d.nameByUser != null) InfoRow(stringResource(R.string.device_original_name), d.name)
-                    diag?.let { InfoRow(stringResource(R.string.device_node_id), "${it.nodeId}") }
+                val items = buildList<Triple<ImageVector, String, String>> {
+                    d.manufacturer?.let { add(Triple(Icons.Rounded.Business, stringResource(R.string.device_vendor), it)) }
+                    d.model?.let { add(Triple(Icons.Rounded.Category, stringResource(R.string.device_model), it)) }
+                    d.swVersion?.let { add(Triple(Icons.Rounded.SystemUpdate, stringResource(R.string.device_firmware), it)) }
+                    d.hwVersion?.let { add(Triple(Icons.Rounded.Memory, stringResource(R.string.device_hardware), it)) }
+                    d.serialNumber?.let { add(Triple(Icons.Rounded.Numbers, stringResource(R.string.device_serial), it)) }
+                    if (d.nameByUser != null) add(Triple(Icons.Rounded.Badge, stringResource(R.string.device_original_name), d.name))
+                    diag?.let { add(Triple(Icons.Rounded.Hub, stringResource(R.string.device_node_id), "${it.nodeId}")) }
                 }
+                if (items.isNotEmpty()) Section(stringResource(R.string.device_section_info)) { Rows(items) }
             }
-            // --- More ------------------------------------------------------------------------
+
+            // --- Remove --------------------------------------------------------------------------
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    vm.haDeviceUrl(d.id)?.let { url ->
-                        OutlinedButton({ runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) } }, Modifier.fillMaxWidth()) {
-                            Icon(Icons.AutoMirrored.Rounded.OpenInNew, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.device_open_in_ha))
-                        }
-                    }
-                    TextButton({ remove = true }, Modifier.fillMaxWidth()) {
-                        Icon(Icons.Rounded.Delete, null, Modifier.size(18.dp), tint = c.fail); Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.devices_remove), color = c.fail)
-                    }
+                OutlinedButton(
+                    { remove = true },
+                    Modifier.fillMaxWidth().padding(top = 8.dp).height(52.dp),
+                    shape = RoundedCornerShape(26.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, status.fail.copy(alpha = 0.6f)),
+                ) {
+                    Icon(Icons.Rounded.Delete, null, Modifier.size(18.dp), tint = status.fail)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.devices_remove), color = status.fail)
                 }
             }
         }
@@ -223,22 +293,67 @@ fun DeviceScreen(vm: MainViewModel, deviceId: String, onBack: () -> Unit) {
     }
 }
 
+/** Small rounded chip in the header (status dot or icon + text). */
 @Composable
-private fun InfoCard(title: String, content: @Composable () -> Unit) {
-    Card(shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surfaceContainer), modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-            content()
+private fun StatusPill(text: String, dot: Color? = null, icon: ImageVector? = null, onClick: (() -> Unit)? = null) {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+        modifier = if (onClick != null) Modifier.clip(CircleShape).clickable(onClick = onClick) else Modifier,
+    ) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (dot != null) Box(Modifier.size(8.dp).clip(CircleShape).background(dot))
+            if (icon != null) Icon(icon, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurface)
+            Spacer(Modifier.width(6.dp))
+            Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
 
+/** Round tonal button with a label below, like the quick actions in smart-home apps. */
 @Composable
-private fun InfoRow(label: String, value: String) {
-    Row(Modifier.fillMaxWidth()) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(0.45f))
-        SelectionContainer(Modifier.weight(0.55f)) {
-            Text(value, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
+private fun QuickAction(icon: ImageVector, label: String, onClick: () -> Unit) {
+    Column(
+        Modifier.clip(MaterialTheme.shapes.medium).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            Modifier.size(56.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer),
+            contentAlignment = Alignment.Center,
+        ) { Icon(icon, null, tint = MaterialTheme.colorScheme.onSecondaryContainer) }
+        Spacer(Modifier.height(6.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+/** Titled card containing rows. */
+@Composable
+private fun Section(title: String, content: @Composable () -> Unit) {
+    Column {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 8.dp, bottom = 6.dp, top = 4.dp),
+        )
+        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+            Column { content() }
+        }
+    }
+}
+
+/** Compact rows: icon, small label, value below; thin dividers between rows. */
+@Composable
+private fun Rows(items: List<Triple<ImageVector, String, String>>) {
+    items.forEachIndexed { i, (icon, label, value) ->
+        if (i > 0) HorizontalDivider(Modifier.padding(start = 56.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, Modifier.size(22.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(18.dp))
+            Column(Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                SelectionContainer { Text(value, style = MaterialTheme.typography.bodyLarge) }
+            }
         }
     }
 }
@@ -252,6 +367,12 @@ private fun networkLabel(type: String) = stringResource(
         else -> R.string.net_unknown
     },
 )
+
+private fun networkIcon(type: String): ImageVector = when (type) {
+    "wifi" -> Icons.Rounded.Wifi
+    "ethernet" -> Icons.Rounded.Lan
+    else -> Icons.Rounded.Hub
+}
 
 @Composable
 private fun nodeTypeLabel(type: String) = stringResource(
@@ -313,9 +434,7 @@ private fun ShareSheet(device: HaDevice, manual: String, qr: String, onDismiss: 
             SelectionContainer {
                 Text(SetupPayloadParser.formatManual(manual), style = MaterialTheme.typography.headlineSmall.copy(fontFamily = FontFamily.Monospace))
             }
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(16.dp))
             Banner(stringResource(R.string.share_hint_other_app))
             Spacer(Modifier.height(16.dp))
         }

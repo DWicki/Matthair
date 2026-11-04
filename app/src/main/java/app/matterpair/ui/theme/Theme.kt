@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -87,9 +88,28 @@ private val AppShapes = Shapes(
 fun MatterPairTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     val ctx = LocalContext.current
     // Dynamic color ("Material You") is available on every supported SDK (minSdk 31).
-    val colors = runCatching { if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx) }
+    val base = runCatching { if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx) }
         .getOrElse { if (dark) DarkColors else LightColors }
+    val colors = if (dark) withTintedSurfaces(base) else base
     androidx.compose.runtime.CompositionLocalProvider(LocalStatusColors provides if (dark) DarkStatus else LightStatus) {
         MaterialTheme(colorScheme = colors, typography = AppTypography, shapes = AppShapes, content = content)
     }
+}
+
+/**
+ * Some ROMs (seen on LineageOS) deliver a dynamic dark scheme whose surface containers are pure
+ * black, so cards vanish into the background. We therefore always derive the container tones
+ * ourselves: the background with an increasing tint of the primary color, like Material 3's
+ * tonal elevation. This keeps cards visibly separated on every ROM.
+ */
+private fun withTintedSurfaces(c: androidx.compose.material3.ColorScheme): androidx.compose.material3.ColorScheme {
+    fun tone(alpha: Float) = c.primary.copy(alpha = alpha).compositeOver(c.surface)
+    return c.copy(
+        surfaceContainerLowest = tone(0.02f),
+        surfaceContainerLow = tone(0.05f),
+        surfaceContainer = tone(0.08f),
+        surfaceContainerHigh = tone(0.11f),
+        surfaceContainerHighest = tone(0.14f),
+        surfaceVariant = tone(0.14f),
+    )
 }
