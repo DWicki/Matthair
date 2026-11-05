@@ -80,7 +80,7 @@ flowchart LR
 
 ## Getting started
 
-1. Install Matthair (F-Droid release is on its way, until then see [Building](#building)).
+1. Install Matthair from the [GitHub releases](../../releases) (F-Droid release is on its way), or see [Building](#building).
 2. Enter your Home Assistant address, e.g. `http://homeassistant.local:8123`.
    If you mix up http/https or forget the port, Matthair finds the right one.
 3. Sign in on Home Assistant's own login page (a long-lived access token works too).
